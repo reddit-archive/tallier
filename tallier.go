@@ -11,6 +11,7 @@ import (
 	"github.com/reddit/tallier/tally"
 )
 
+// TODO: let flags that follow this one override flags from the file
 var configFlag = flag.String("config", "",
 	"read flags from this file; overrides any command line settings")
 
