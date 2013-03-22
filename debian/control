@@ -1,0 +1,14 @@
+Source: tallier
+Maintainer: Logan Hanks <intortus@reddit.com>
+Section: devel
+Priority: optional
+Build-Depends: debhelper (>= 7.0), golang-go
+Standards-Version: 3.9.3
+Homepage: http://github.com/reddit/tallier
+Vcs-Git: git://github.com/reddit/tallier.git
+
+Package: tallier
+Architecture: amd64
+Depends: ${misc:Depends}
+Description: Stats collecting server
+ Receives stats via UDP and periodically sends cumulative reports to Graphite.
