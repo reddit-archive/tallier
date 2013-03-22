@@ -17,7 +17,7 @@ var configFlag = flag.String("config", "",
 var portFlag = flag.Int("port", 8081, "udp port to listen for statgrams on")
 
 var numWorkersFlag = flag.Int("numWorkers",
-	int(math.Min(1, float64(runtime.NumCPU()-1))),
+	int(math.Max(1, float64(runtime.NumCPU()-1))),
 	"number of parallel workers for parsing and accumulating stats")
 
 var flushIntervalFlag = flag.Duration("flushInterval",
