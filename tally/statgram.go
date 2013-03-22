@@ -23,7 +23,7 @@ type Sample struct {
 type Statgram []Sample
 
 // ParseStatgram reads samples from the given text, returning a Statgram.
-// The format of a statgram is line-oriented. Each line gives names a key and
+// The format of a statgram is line-oriented. Each line names a key and
 // provides one or more sampled values for that key. The documentation for the
 // ParseStatgramLine function explains the formatting of each line.
 func ParseStatgram(text string) (statgram Statgram) {
