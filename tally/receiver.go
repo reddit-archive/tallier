@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-const STATGRAM_CHANNEL_BUFSIZE = 1024
+const (
+    STATGRAM_CHANNEL_BUFSIZE = 1024
+    STATGRAM_MAXSIZE = 1024
+)
 
 // Receivers share the work of listening on a UDP port and accumulating stats.
 type Receiver struct {
@@ -21,7 +24,7 @@ type Receiver struct {
 // takes care of parsing it and returns it. Any parse errors are ignored, so
 // it's possible an empty statgram will be returned.
 func (receiver *Receiver) ReadOnce() (statgram Statgram, err error) {
-	buf := make([]byte, 1024)
+	buf := make([]byte, STATGRAM_MAXSIZE)
 	var size int
 	size, err = receiver.conn.Read(buf)
 	if err == nil {
