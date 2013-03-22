@@ -15,7 +15,7 @@ type HaroldPoster interface {
 
 // Harold is a monitoring service used by reddit. We post heartbeat messages to
 // harold to let it know we're alive.
-// See more at https://github.com/spladug/wessex.
+// See more at https://github.com/spladug/harold.
 type Harold struct {
 	address string
 	secret  string
