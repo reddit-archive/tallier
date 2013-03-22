@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+GOPKG = github.com/reddit/tallier
+GOPATH = "$(CURDIR)"/debian/tmp/usr/lib/gocode
+
+%:
+	dh $@
+
+clean:
+	dh_clean
+	rm -f tallier.debhelper.log
+
+binary-arch: clean
+	dh_prep
+	dh_installdirs /usr/bin
+	mkdir -p "${GOPATH}/src/${GOPKG}"
+	find . -path ./debian -prune -o -type f -name '*.go' -exec tar cf - {} + \
+		| (cd "${GOPATH}/src/${GOPKG}" && tar xvf -)
+	GOPATH=${GOPATH} go build -v -o ${GOPATH}/bin/tallier ${GOPKG}
+	dh_install /usr/lib/gocode/bin/tallier /usr/bin
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_installdocs
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-arch
+

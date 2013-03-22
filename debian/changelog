@@ -1,0 +1,5 @@
+tallier (1.0.0) unstable; urgency=low
+
+  * rewrote previous Python implementation in Go for improved performance
+
+ -- Logan Hanks <intortus@reddit.com>  Fri, 22 Mar 2013 14:03:02 -0700
