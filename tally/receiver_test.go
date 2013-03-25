@@ -9,7 +9,7 @@ import (
 func TestReceiveOnce(t *testing.T) {
 	receiver := new(Receiver)
 	receiver.conn = bytes.NewBufferString("x:1|c")
-	expected := Statgram{Sample{"x", 1.0, COUNTER, 1.0}}
+	expected := Statgram{Sample{"x", 1.0, COUNTER, 1.0, ""}}
 
 	statgram, err := receiver.ReadOnce()
 	if err != nil {
@@ -52,14 +52,14 @@ func TestReceiveStatgrams(t *testing.T) {
 	statgrams := receiver.ReceiveStatgrams()
 
 	conn.Write([]byte("x:1.0|c"))
-	expected := Statgram{Sample{"x", 1.0, COUNTER, 1.0}}
+	expected := Statgram{Sample{"x", 1.0, COUNTER, 1.0, ""}}
 	statgram := <-statgrams
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
 
 	conn.Write([]byte("y:2.0|ms@0.5"))
-	expected = Statgram{Sample{"y", 2.0, TIMER, 0.5}}
+	expected = Statgram{Sample{"y", 2.0, TIMER, 0.5, ""}}
 	statgram = <-statgrams
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
