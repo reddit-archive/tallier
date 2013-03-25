@@ -1,4 +1,4 @@
-tallier (1.0.0) unstable; urgency=low
+tallier (1.0.0) precise; urgency=low
 
   * rewrote previous Python implementation in Go for improved performance
 
