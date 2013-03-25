@@ -12,8 +12,8 @@ func TestSnapshots(t *testing.T) {
 	a := NewSnapshot()
 	b := NewSnapshot()
 	a.ProcessStatgram(Statgram{
-		Sample{"x", 1.0, COUNTER, 1.0},
-		Sample{"y", 1.0, COUNTER, 0.5},
+		Sample{"x", 1.0, COUNTER, 1.0, ""},
+		Sample{"y", 1.0, COUNTER, 0.5, ""},
 	})
 	for i := 0.0; i < 10; i++ {
 		a.Time("z", i)
@@ -21,8 +21,8 @@ func TestSnapshots(t *testing.T) {
 	a.Count("tallier.messages.child_1", 2)
 	a.Count("tallier.bytes.child_1", 20)
 	b.ProcessStatgram(Statgram{
-		Sample{"y", 3.0, COUNTER, 1.0},
-		Sample{"z", 4.0, COUNTER, 1.0},
+		Sample{"y", 3.0, COUNTER, 1.0, ""},
+		Sample{"z", 4.0, COUNTER, 1.0, ""},
 	})
 	for i := 0.0; i < 5; i++ {
 		b.Time("z", 2*i)
@@ -95,6 +95,55 @@ func TestGraphiteReport(t *testing.T) {
 	snapshot.Aggregate(child)
 	report = snapshot.GraphiteReport()
 	if s, ok := assertDeepEqual(expected, report); !ok {
+		t.Error(s)
+	}
+}
+
+func TestStringValues(t *testing.T) {
+	statgram := Statgram{
+		Sample{"x", 10, STRING, 1.0, "A"},
+		Sample{"x", 1, STRING, 0.5, "B"},
+	}
+	snapshot := NewSnapshot()
+	snapshot.ProcessStatgram(statgram)
+	expected := FrequencyCountSlice{
+		FrequencyCount{"A", 10},
+		FrequencyCount{"B", 2},
+	}
+	result := snapshot.stringCounts["x"].SortedItems()
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
+	}
+}
+
+func TestStringValueAggregation(t *testing.T) {
+	child1 := NewSnapshot()
+	child1.CountString("x", "A", 1)
+	child1.CountString("x", "B", 2)
+	child1.CountString("y", "AA", 1)
+
+	child2 := NewSnapshot()
+	child2.CountString("x", "B", 2)
+	child2.CountString("x", "C", 2)
+	child2.CountString("z", "AAA", 1)
+
+	expected := make(map[string]FrequencyCountSlice)
+	expected["x"] = FrequencyCountSlice{
+		FrequencyCount{"B", 4},
+		FrequencyCount{"C", 2},
+		FrequencyCount{"A", 1},
+	}
+	expected["y"] = FrequencyCountSlice{FrequencyCount{"AA", 1}}
+	expected["z"] = FrequencyCountSlice{FrequencyCount{"AAA", 1}}
+	parent := NewSnapshot()
+	parent.Aggregate(child1)
+	parent.Aggregate(child2)
+
+	result := make(map[string]FrequencyCountSlice)
+	for key, fcs := range parent.stringCounts {
+		result[key] = fcs.SortedItems()
+	}
+	if s, ok := assertDeepEqual(expected, result); !ok {
 		t.Error(s)
 	}
 }

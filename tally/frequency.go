@@ -57,3 +57,9 @@ func (fcr *FrequencyCounter) SortedItems() FrequencyCountSlice {
 	sort.Sort(fcs)
 	return fcs
 }
+
+func (fcr *FrequencyCounter) Aggregate(child *FrequencyCounter) {
+	for key, count := range child.frequencies {
+		fcr.Count(key, count)
+	}
+}
