@@ -6,8 +6,8 @@ import (
 )
 
 const (
-    STATGRAM_CHANNEL_BUFSIZE = 1024
-    STATGRAM_MAXSIZE = 1024
+	STATGRAM_CHANNEL_BUFSIZE = 1024
+	STATGRAM_MAXSIZE         = 1024
 )
 
 // Receivers share the work of listening on a UDP port and accumulating stats.
