@@ -62,7 +62,7 @@ func TestReadArg(t *testing.T) {
 
 	name, val, n, err := readArg(r)
 	if err == nil {
-		t.Error("expected error, got %#v, %#v, %#v", name, val, n)
+		t.Errorf("expected error, got %#v, %#v, %#v", name, val, n)
 	}
 	if n != 2 {
 		t.Errorf("expected lineno to be %d, got %d", 2, n)
