@@ -48,6 +48,7 @@ func (server *Server) Loop() error {
 		intervals = server.harold.HeartMonitor("tallier")
 	}
 	snapchan := Aggregate(server.conn, server.numWorkers, server.flushInterval)
+	ServeStatus(server)
 	infolog("running")
 	for {
 		snapshot := <-snapchan
