@@ -67,6 +67,7 @@ func (snapshot *Snapshot) ProcessStatgram(statgram Statgram) {
 			snapshot.CountString(sample.key, sample.stringValue,
 				sample.value/sample.sampleRate)
 		}
+		snapshot.CountString("tallier.samples", sample.key, 1)
 	}
 }
 

@@ -46,6 +46,9 @@ func TestSnapshots(t *testing.T) {
 	expected.Count("tallier.bytes.child_2", 30)
 	expected.Count("tallier.messages.total", 5)
 	expected.Count("tallier.bytes.total", 50)
+	expected.CountString("tallier.samples", "x", 1)
+	expected.CountString("tallier.samples", "y", 2)
+	expected.CountString("tallier.samples", "z", 1)
 	expected.numChildren = 2
 	parent.Aggregate(a)
 	parent.Aggregate(b)
