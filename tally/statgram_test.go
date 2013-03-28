@@ -1,7 +1,6 @@
 package tally
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -72,8 +71,8 @@ func TestParseStatgramLine(t *testing.T) {
 	if err != nil {
 		t.Error("expected statgram, got error:", err)
 	}
-	if !reflect.DeepEqual(expected, statgram) {
-		t.Errorf("expected %#v, got %#v", expected, statgram)
+	if s, ok := assertDeepEqual(expected, statgram); !ok {
+		t.Error(s)
 	}
 
 	statgram, err = ParseStatgramLine("test:1|c:error")
@@ -90,13 +89,13 @@ func TestParseStatgram(t *testing.T) {
 		Sample{key: "z", value: 0.1, valueType: COUNTER, sampleRate: 1.0},
 	}
 	statgram := ParseStatgram("x:1|c:2|c\ny:1|ms@0.5:error\nz:0.1|c")
-	if !reflect.DeepEqual(expected, statgram) {
-		t.Errorf("expected %#v, got %#v", expected, statgram)
+	if s, ok := assertDeepEqual(expected, statgram); !ok {
+		t.Error(s)
 	}
 
 	statgram = ParseStatgram(
 		"x:1|c\n^022|c\ny:1|ms@0.5:error\n^fferror\nz:0.1|c")
-	if !reflect.DeepEqual(expected, statgram) {
-		t.Errorf("expected %#v, got %#v", expected, statgram)
+	if s, ok := assertDeepEqual(expected, statgram); !ok {
+		t.Error(s)
 	}
 }

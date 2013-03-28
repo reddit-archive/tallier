@@ -2,7 +2,6 @@ package tally
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -51,8 +50,8 @@ func TestSnapshots(t *testing.T) {
 	parent.Aggregate(a)
 	parent.Aggregate(b)
 	sort.Float64s(parent.timings["z"])
-	if !reflect.DeepEqual(expected, parent) {
-		t.Errorf("  expected:\n%#v\n  got:\n%#v", expected, parent)
+	if s, ok := assertDeepEqual(expected, parent); !ok {
+		t.Error(s)
 	}
 }
 
@@ -68,8 +67,8 @@ func TestGraphiteReport(t *testing.T) {
 	snapshot.start = now
 	snapshot.duration = time.Duration(10) * time.Second
 	report := snapshot.GraphiteReport()
-	if !reflect.DeepEqual(expected, report) {
-		t.Errorf("  expected:\n%#v\n  got:\n%#v", expected, report)
+	if s, ok := assertDeepEqual(expected, report); !ok {
+		t.Error(s)
 	}
 
 	format := func(stat string, value float64) string {
@@ -95,7 +94,7 @@ func TestGraphiteReport(t *testing.T) {
 	}
 	snapshot.Aggregate(child)
 	report = snapshot.GraphiteReport()
-	if !reflect.DeepEqual(expected, report) {
-		t.Errorf("  expected:\n%#v\n  got:\n%#v", expected, report)
+	if s, ok := assertDeepEqual(expected, report); !ok {
+		t.Error(s)
 	}
 }

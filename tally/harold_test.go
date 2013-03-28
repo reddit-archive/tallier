@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -42,8 +41,8 @@ func TestHeartMonitor(t *testing.T) {
 	expected["interval"] = fmt.Sprintf("%f", 1.0)
 	req := <-poster.request
 	poster.response <- nil
-	if !reflect.DeepEqual(expected, req.data) {
-		t.Errorf("expected %v, result was %v", expected, req.data)
+	if s, ok := assertDeepEqual(expected, req.data); !ok {
+		t.Error(s)
 	}
 
 	// send i and hold heartbeat request. send j and k, then return an error on
@@ -55,15 +54,15 @@ func TestHeartMonitor(t *testing.T) {
 	req = <-poster.request
 	intervals <- j
 	intervals <- k
-	if !reflect.DeepEqual(expected, req.data) {
-		t.Errorf("expected %v, result was %v", expected, req.data)
+	if s, ok := assertDeepEqual(expected, req.data); !ok {
+		t.Error(s)
 	}
 
 	expected["interval"] = fmt.Sprintf("%f", 3.0)
 	poster.response <- errors.New("fake error")
 	req = <-poster.request
-	if !reflect.DeepEqual(expected, req.data) {
-		t.Errorf("expected %v, result was %v", expected, req.data)
+	if s, ok := assertDeepEqual(expected, req.data); !ok {
+		t.Error(s)
 	}
 }
 
@@ -97,7 +96,7 @@ func TestMakeParams(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 	result := makeParams(data)
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("expected %v, result was %v", expected, result)
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
 	}
 }
