@@ -52,6 +52,8 @@ func (server *Server) Loop() error {
 	ServeStatus(server)
 	infolog("running")
 	server.snapshot = NewSnapshot()
+	server.snapshot.stringCountIntervals = []time.Duration{
+		time.Minute, time.Hour, time.Duration(24) * time.Hour}
 	server.snapshot.start = time.Now()
 	tick := time.Tick(server.flushInterval)
 	for {

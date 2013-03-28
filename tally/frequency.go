@@ -2,11 +2,12 @@ package tally
 
 import (
 	"sort"
+	"time"
 )
 
 type FrequencyCount struct {
 	key   string
-	count float64
+	count MultilevelCount
 }
 
 type FrequencyCountSlice []FrequencyCount
@@ -20,32 +21,45 @@ func (fcs FrequencyCountSlice) Swap(i, j int) {
 }
 
 func (fcs FrequencyCountSlice) Less(i, j int) bool {
-	return fcs[j].count < fcs[i].count
+	return fcs[j].count.Total() < fcs[i].count.Total()
 }
 
 type FrequencyCounter struct {
 	capacity           int
+	intervals          []time.Duration
 	oversampleCapacity int
 	totalObserved      float64
-	frequencies        map[string]float64
+	frequencies        map[string]MultilevelCount
 }
 
-func NewFrequencyCounter(capacity int) *FrequencyCounter {
-	return &FrequencyCounter{capacity, capacity, 0, make(map[string]float64)}
+func NewFrequencyCounter(capacity int,
+	intervals ...time.Duration) *FrequencyCounter {
+	return &FrequencyCounter{
+		capacity:           capacity,
+		intervals:          intervals,
+		oversampleCapacity: capacity,
+		frequencies:        make(map[string]MultilevelCount),
+	}
 }
 
 func (fcr *FrequencyCounter) Count(key string, count float64) {
 	fcr.totalObserved += count
-	fcr.frequencies[key] += count
+	mc, ok := fcr.frequencies[key]
+	if !ok {
+		fcr.frequencies[key] = NewMultilevelCount(fcr.intervals...)
+		mc = fcr.frequencies[key]
+	}
+	mc.Count(count)
 }
 
 func (fcr *FrequencyCounter) Trim() {
-	if len(fcr.frequencies) <= fcr.capacity+fcr.oversampleCapacity {
-		return
-	}
 	items := fcr.SortedItems()
-	for i := fcr.capacity + fcr.oversampleCapacity; i < len(items); i++ {
-		delete(fcr.frequencies, items[i].key)
+	for i, item := range items {
+		if i < fcr.capacity+fcr.oversampleCapacity {
+			fcr.frequencies[item.key].Rollup()
+		} else {
+			delete(fcr.frequencies, items[i].key)
+		}
 	}
 }
 
@@ -60,6 +74,6 @@ func (fcr *FrequencyCounter) SortedItems() FrequencyCountSlice {
 
 func (fcr *FrequencyCounter) Aggregate(child *FrequencyCounter) {
 	for key, count := range child.frequencies {
-		fcr.Count(key, count)
+		fcr.Count(key, count.Total())
 	}
 }

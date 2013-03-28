@@ -2,7 +2,16 @@ package tally
 
 import (
 	"testing"
+	"time"
 )
+
+func fc(key string, value float64) FrequencyCount {
+	c := make(MultilevelCount, 1)
+	c[0].NewBucket()
+	c[0].timestamps[0] = time.Unix(0, 0)
+	c.Count(value)
+	return FrequencyCount{key, c}
+}
 
 func TestSortedItems(t *testing.T) {
 	fcr := NewFrequencyCounter(10)
@@ -11,13 +20,13 @@ func TestSortedItems(t *testing.T) {
 	fcr.Count("z", 3)
 
 	expected := FrequencyCountSlice{
-		FrequencyCount{"z", 3},
-		FrequencyCount{"y", 2},
-		FrequencyCount{"x", 1},
+		fc("z", 3),
+		fc("y", 2),
+		fc("x", 1),
 	}
 	result := fcr.SortedItems()
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("expected %#v, got %#v", expected, result)
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
 	}
 }
 
@@ -28,13 +37,13 @@ func TestTrim(t *testing.T) {
 	}
 
 	expected := FrequencyCountSlice{
-		FrequencyCount{"d", 3},
-		FrequencyCount{"c", 2},
+		fc("d", 3),
+		fc("c", 2),
 	}
 	fcr.Trim()
 	result := fcr.SortedItems()
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("expected %#v, got %#v", expected, result)
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
 	}
 }
 
@@ -53,12 +62,12 @@ func TestAggregate(t *testing.T) {
 	parent.Aggregate(child2)
 
 	expected := FrequencyCountSlice{
-		FrequencyCount{"y", 7},
-		FrequencyCount{"x", 5},
-		FrequencyCount{"z", 3},
+		fc("y", 7),
+		fc("x", 5),
+		fc("z", 3),
 	}
 	result := parent.SortedItems()
-	if !reflect.DeepEqual(expected, result) {
-		t.Errorf("expected %#v, got %#v", expected, result)
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
 	}
 }

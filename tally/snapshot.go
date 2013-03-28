@@ -12,12 +12,13 @@ const TIMINGS_INITIAL_CAPACITY = 1024
 const STRING_COUNT_CAPACITY = 1024
 
 type Snapshot struct {
-	counts       map[string]float64
-	timings      map[string][]float64
-	stringCounts map[string]*FrequencyCounter
-	start        time.Time
-	duration     time.Duration
-	numChildren  int
+	counts               map[string]float64
+	timings              map[string][]float64
+	stringCounts         map[string]*FrequencyCounter
+	stringCountIntervals []time.Duration
+	start                time.Time
+	duration             time.Duration
+	numChildren          int
 }
 
 func NewSnapshot() *Snapshot {
@@ -49,7 +50,8 @@ func (snapshot *Snapshot) Time(key string, value float64) {
 func (snapshot *Snapshot) CountString(key, value string, count float64) {
 	fc, ok := snapshot.stringCounts[key]
 	if !ok {
-		fc = NewFrequencyCounter(STRING_COUNT_CAPACITY)
+		fc = NewFrequencyCounter(STRING_COUNT_CAPACITY,
+			snapshot.stringCountIntervals...)
 		snapshot.stringCounts[key] = fc
 	}
 	fc.Count(value, count)
@@ -86,7 +88,8 @@ func (snapshot *Snapshot) Aggregate(child *Snapshot) {
 	for key, stringCounts := range child.stringCounts {
 		fc, ok := snapshot.stringCounts[key]
 		if !ok {
-			fc = NewFrequencyCounter(STRING_COUNT_CAPACITY)
+			fc = NewFrequencyCounter(STRING_COUNT_CAPACITY,
+				snapshot.stringCountIntervals...)
 			snapshot.stringCounts[key] = fc
 		}
 		fc.Aggregate(stringCounts)

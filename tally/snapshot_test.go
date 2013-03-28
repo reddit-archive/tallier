@@ -110,8 +110,8 @@ func TestStringValues(t *testing.T) {
 	snapshot := NewSnapshot()
 	snapshot.ProcessStatgram(statgram)
 	expected := FrequencyCountSlice{
-		FrequencyCount{"A", 10},
-		FrequencyCount{"B", 2},
+		fc("A", 10),
+		fc("B", 2),
 	}
 	result := snapshot.stringCounts["x"].SortedItems()
 	if s, ok := assertDeepEqual(expected, result); !ok {
@@ -132,12 +132,12 @@ func TestStringValueAggregation(t *testing.T) {
 
 	expected := make(map[string]FrequencyCountSlice)
 	expected["x"] = FrequencyCountSlice{
-		FrequencyCount{"B", 4},
-		FrequencyCount{"C", 2},
-		FrequencyCount{"A", 1},
+		fc("B", 4),
+		fc("C", 2),
+		fc("A", 1),
 	}
-	expected["y"] = FrequencyCountSlice{FrequencyCount{"AA", 1}}
-	expected["z"] = FrequencyCountSlice{FrequencyCount{"AAA", 1}}
+	expected["y"] = FrequencyCountSlice{fc("AA", 1)}
+	expected["z"] = FrequencyCountSlice{fc("AAA", 1)}
 	parent := NewSnapshot()
 	parent.Aggregate(child1)
 	parent.Aggregate(child2)

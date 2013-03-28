@@ -53,6 +53,12 @@ func StringPage(s *Server, w http.ResponseWriter, r *http.Request, key string) {
 	}
 	w.Header().Set("Content-type", "text/plain; charset=utf-8")
 	for i, fc := range fcs.SortedItems() {
-		fmt.Fprintf(w, "%4d. %-40s %f\n", i+1, fc.key, fc.count)
+		fmt.Fprintf(w, "%4d. %-40s", i+1, fc.key)
+		for j := 1; j < len(fc.count); j++ {
+			fmt.Fprintf(w, "  % 8.03g (%g)",
+				fc.count[j].Current/fc.count[j].Duration().Seconds(),
+				fc.count[j].Current)
+		}
+		fmt.Fprintf(w, "\n")
 	}
 }
