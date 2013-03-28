@@ -72,6 +72,7 @@ func TestRunReceiver(t *testing.T) {
 	expected.Count("tallier.messages.child_test", 2)
 	expected.Count("tallier.bytes.child_test",
 		float64(len("x:1.0|c")+len("x:2.0|c")))
+	expected.CountString("tallier.samples", "x", 2)
 
 	notifier := make(chan Statgram)
 	conn := make(CoordinatedReader)

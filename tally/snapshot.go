@@ -133,3 +133,11 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 		snapshot.numChildren))
 	return
 }
+
+func (snapshot *Snapshot) Flush() {
+	snapshot.counts = make(map[string]float64, len(snapshot.counts))
+	snapshot.timings = make(map[string][]float64, len(snapshot.timings))
+	for _, fcs := range snapshot.stringCounts {
+		fcs.Trim()
+	}
+}
