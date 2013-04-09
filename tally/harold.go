@@ -61,7 +61,7 @@ func (harold *Harold) Heartbeat(tag string,
 	interval time.Duration) (*http.Response, error) {
 	data := map[string]string{
 		"tag":      tag,
-		"interval": fmt.Sprintf("%f", interval.Seconds()),
+		"interval": fmt.Sprintf("%d", int(interval.Seconds())),
 	}
 	return harold.poster.Post([]string{"heartbeat"}, data)
 }
