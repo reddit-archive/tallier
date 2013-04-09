@@ -20,6 +20,10 @@ func (lvl *CountLevel) Duration() time.Duration {
 	return time.Since(lvl.timestamps[0])
 }
 
+func (lvl *CountLevel) RatePer(unit time.Duration) float64 {
+	return lvl.Current / (lvl.Duration().Seconds() / unit.Seconds())
+}
+
 func (lvl *CountLevel) NewBucket() {
 	lvl.buckets = append(lvl.buckets, 0)
 	lvl.timestamps = append(lvl.timestamps, time.Now())
