@@ -1,6 +1,7 @@
 package tally
 
 import (
+	"fmt"
 	"io"
 	"time"
 )
@@ -110,7 +111,8 @@ func Aggregate(conn io.Reader, numReceivers int) (snapchan chan *Snapshot) {
 	snapchan = make(chan *Snapshot)
 	var controlChannels []chan *Snapshot
 	for i := 0; i < numReceivers; i++ {
-		controlChannels = append(controlChannels, RunReceiver(string(i), conn))
+		controlChannels = append(controlChannels,
+			RunReceiver(fmt.Sprintf("%d", i), conn))
 	}
 
 	go func() {
