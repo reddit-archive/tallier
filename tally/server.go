@@ -9,6 +9,7 @@ import (
 )
 
 type Server struct {
+	receiverHost  string
 	receiverPort  int
 	numWorkers    int
 	flushInterval time.Duration
@@ -18,9 +19,10 @@ type Server struct {
 	snapshot      *Snapshot
 }
 
-func NewServer(port int, numWorkers int, flushInterval time.Duration,
-	graphite *Graphite, harold *Harold) *Server {
+func NewServer(host string, port int, numWorkers int,
+	flushInterval time.Duration, graphite *Graphite, harold *Harold) *Server {
 	return &Server{
+		receiverHost:  host,
 		receiverPort:  port,
 		numWorkers:    numWorkers,
 		flushInterval: flushInterval,
@@ -32,7 +34,7 @@ func NewServer(port int, numWorkers int, flushInterval time.Duration,
 func (server *Server) setup() error {
 	runtime.GOMAXPROCS(server.numWorkers + 1)
 	receiver_addr, err := net.ResolveUDPAddr("udp",
-		fmt.Sprintf(":%d", server.receiverPort))
+		fmt.Sprintf("%s:%d", server.receiverHost, server.receiverPort))
 	if err != nil {
 		return err
 	}

@@ -43,7 +43,8 @@ func ServeStatus(server *Server) error {
 		}
 	}
 	if err == nil {
-		go http.ListenAndServe(fmt.Sprintf(":%d", server.receiverPort), nil)
+		addr := fmt.Sprintf("%s:%d", server.receiverHost, server.receiverPort)
+		go http.ListenAndServe(addr, nil)
 	}
 	return err
 }

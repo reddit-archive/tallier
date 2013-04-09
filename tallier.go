@@ -15,6 +15,9 @@ import (
 var configFlag = flag.String("config", "",
 	"read flags from this file; overrides any command line settings")
 
+var interfaceFlag = flag.String("interface", "",
+        "interface to listen for statgrams and status page requests on")
+
 var portFlag = flag.Int("port", 8081,
         "udp port to listen for statgrams and tcp port to serve status pages")
 
@@ -85,7 +88,8 @@ func main() {
 	}
 
 	server := tally.NewServer(
-		*portFlag, *numWorkersFlag, *flushIntervalFlag, graphite, harold)
+		*interfaceFlag, *portFlag, *numWorkersFlag, *flushIntervalFlag,
+        graphite, harold)
 
 	err = server.Loop()
 	if err != nil {
