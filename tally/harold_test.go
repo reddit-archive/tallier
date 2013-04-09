@@ -2,7 +2,6 @@ package tally
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -38,7 +37,7 @@ func TestHeartMonitor(t *testing.T) {
 	intervals <- i
 	expected := make(map[string]string)
 	expected["tag"] = "tag"
-	expected["interval"] = fmt.Sprintf("%f", 1.0)
+	expected["interval"] = "1"
 	req := <-poster.request
 	poster.response <- nil
 	if s, ok := assertDeepEqual(expected, req.data); !ok {
@@ -58,7 +57,7 @@ func TestHeartMonitor(t *testing.T) {
 		t.Error(s)
 	}
 
-	expected["interval"] = fmt.Sprintf("%f", 3.0)
+	expected["interval"] = "3"
 	poster.response <- errors.New("fake error")
 	req = <-poster.request
 	if s, ok := assertDeepEqual(expected, req.data); !ok {

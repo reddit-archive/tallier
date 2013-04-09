@@ -91,7 +91,10 @@ func (harold *Harold) HeartMonitor(tag string) (intervals chan time.Duration) {
 			if alive != nil && !waiting {
 				go func(i time.Duration) {
 					infolog("sending heartbeat to harold")
-					_, x := harold.Heartbeat(tag, i)
+					r, x := harold.Heartbeat(tag, i)
+					if x == nil && r != nil {
+						r.Body.Close()
+					}
 					err <- x
 				}(*alive)
 				waiting = true
