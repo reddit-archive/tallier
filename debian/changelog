@@ -1,3 +1,12 @@
+tallier (1.1.0) precise; urgency=low
+
+  * added new sample type (strings)
+  * added HTTP status pages
+  * added -interface flag
+  * fixed bugs with sending heartbeats to harold
+
+ -- Logan Hanks <intortus@reddit.com>  Tue, 09 Apr 2013 17:02:09 -0700
+
 tallier (1.0.0) precise; urgency=low
 
   * rewrote previous Python implementation in Go for improved performance
