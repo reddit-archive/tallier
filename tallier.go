@@ -15,7 +15,8 @@ import (
 var configFlag = flag.String("config", "",
 	"read flags from this file; overrides any command line settings")
 
-var portFlag = flag.Int("port", 8081, "udp port to listen for statgrams on")
+var portFlag = flag.Int("port", 8081,
+        "udp port to listen for statgrams and tcp port to serve status pages")
 
 var numWorkersFlag = flag.Int("numWorkers",
 	int(math.Max(1, float64(runtime.NumCPU()-1))),

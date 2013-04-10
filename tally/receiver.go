@@ -105,8 +105,8 @@ func RunReceiver(id string, conn io.Reader,
 }
 
 // Aggregate spins off receivers and a goroutine to manage them. Returns a
-// channel by which aggregated snapshots will be shared at the given interval.
-func Aggregate(conn io.Reader, numReceivers int, flushInterval time.Duration) (snapchan chan *Snapshot) {
+// channel to coordinate the collection of snapshots from the receivers.
+func Aggregate(conn io.Reader, numReceivers int) (snapchan chan *Snapshot) {
 	snapchan = make(chan *Snapshot)
 	var controlChannels []chan *Snapshot
 	for i := 0; i < numReceivers; i++ {
@@ -115,22 +115,17 @@ func Aggregate(conn io.Reader, numReceivers int, flushInterval time.Duration) (s
 
 	go func() {
 		var numStats int64 = 0
-		var snapshot *Snapshot
 		for {
-			if snapshot != nil {
-				snapchan <- snapshot
-			}
-			snapshot = NewSnapshot()
-			snapshot.start = time.Now()
-			time.Sleep(flushInterval)
+			snapshot := <-snapchan
 			for _, controlChannel := range controlChannels {
 				controlChannel <- nil
 			}
-			snapshot.duration = time.Now().Sub(snapshot.start)
 			for _, controlChannel := range controlChannels {
 				snapshot.Aggregate(<-controlChannel)
 			}
+			snapshot.duration = time.Now().Sub(snapshot.start)
 			numStats += int64(snapshot.NumStats())
+			snapchan <- snapshot
 		}
 	}()
 	return

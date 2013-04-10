@@ -8,21 +8,25 @@ import (
 	"time"
 )
 
-const TIMINGS_INITIAL_SIZE = 1024
+const TIMINGS_INITIAL_CAPACITY = 1024
+const STRING_COUNT_CAPACITY = 1024
 
 type Snapshot struct {
-	counts      map[string]float64
-	timings     map[string][]float64
-	start       time.Time
-	duration    time.Duration
-	numChildren int
+	counts               map[string]float64
+	timings              map[string][]float64
+	stringCounts         map[string]*FrequencyCounter
+	stringCountIntervals []time.Duration
+	start                time.Time
+	duration             time.Duration
+	numChildren          int
 }
 
 func NewSnapshot() *Snapshot {
 	return &Snapshot{
-		counts:      make(map[string]float64),
-		timings:     make(map[string][]float64),
-		numChildren: 0,
+		counts:       make(map[string]float64),
+		timings:      make(map[string][]float64),
+		stringCounts: make(map[string]*FrequencyCounter),
+		numChildren:  0,
 	}
 }
 
@@ -38,9 +42,19 @@ func (snapshot *Snapshot) Time(key string, value float64) {
 	var timings []float64
 	var present bool
 	if timings, present = snapshot.timings[key]; !present {
-		timings = make([]float64, 0, TIMINGS_INITIAL_SIZE)
+		timings = make([]float64, 0, TIMINGS_INITIAL_CAPACITY)
 	}
 	snapshot.timings[key] = append(timings, value)
+}
+
+func (snapshot *Snapshot) CountString(key, value string, count float64) {
+	fc, ok := snapshot.stringCounts[key]
+	if !ok {
+		fc = NewFrequencyCounter(STRING_COUNT_CAPACITY,
+			snapshot.stringCountIntervals...)
+		snapshot.stringCounts[key] = fc
+	}
+	fc.Count(value, count)
 }
 
 // ProcessStatgram accumulates a statistic report into the current snapshot.
@@ -51,7 +65,11 @@ func (snapshot *Snapshot) ProcessStatgram(statgram Statgram) {
 			snapshot.Count(sample.key, sample.value/sample.sampleRate)
 		case TIMER:
 			snapshot.Time(sample.key, sample.value)
+		case STRING:
+			snapshot.CountString(sample.key, sample.stringValue,
+				sample.value/sample.sampleRate)
 		}
+		snapshot.CountString("tallier.samples", sample.key, 1)
 	}
 }
 
@@ -66,6 +84,15 @@ func (snapshot *Snapshot) Aggregate(child *Snapshot) {
 	}
 	for key, timings := range child.timings {
 		snapshot.timings[key] = append(snapshot.timings[key], timings...)
+	}
+	for key, stringCounts := range child.stringCounts {
+		fc, ok := snapshot.stringCounts[key]
+		if !ok {
+			fc = NewFrequencyCounter(STRING_COUNT_CAPACITY,
+				snapshot.stringCountIntervals...)
+			snapshot.stringCounts[key] = fc
+		}
+		fc.Aggregate(stringCounts)
 	}
 	snapshot.numChildren++
 }
@@ -109,4 +136,12 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 	report = append(report, makeLine("stats.tallier.num_workers %d",
 		snapshot.numChildren))
 	return
+}
+
+func (snapshot *Snapshot) Flush() {
+	snapshot.counts = make(map[string]float64, len(snapshot.counts))
+	snapshot.timings = make(map[string][]float64, len(snapshot.timings))
+	for _, fcs := range snapshot.stringCounts {
+		fcs.Trim()
+	}
 }

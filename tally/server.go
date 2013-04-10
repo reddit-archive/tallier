@@ -15,6 +15,7 @@ type Server struct {
 	graphite      *Graphite
 	harold        *Harold
 	conn          *net.UDPConn
+	snapshot      *Snapshot
 }
 
 func NewServer(port int, numWorkers int, flushInterval time.Duration,
@@ -47,10 +48,19 @@ func (server *Server) Loop() error {
 	if server.harold != nil {
 		intervals = server.harold.HeartMonitor("tallier")
 	}
-	snapchan := Aggregate(server.conn, server.numWorkers, server.flushInterval)
+	snapchan := Aggregate(server.conn, server.numWorkers)
+	ServeStatus(server)
 	infolog("running")
+	server.snapshot = NewSnapshot()
+	server.snapshot.stringCountIntervals = []time.Duration{
+		time.Minute, time.Hour, time.Duration(24) * time.Hour}
+	server.snapshot.start = time.Now()
+	tick := time.Tick(server.flushInterval)
 	for {
+		<-tick
+		snapchan <- server.snapshot
 		snapshot := <-snapchan
+		nextStart := time.Now()
 		for {
 			infolog("sending snapshot with %d stats to graphite",
 				snapshot.NumStats())
@@ -64,6 +74,8 @@ func (server *Server) Loop() error {
 		if server.harold != nil {
 			intervals <- 3 * server.flushInterval
 		}
+		snapshot.Flush()
+		snapshot.start = nextStart
 	}
 	return errors.New("server loop terminated")
 }

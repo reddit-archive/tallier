@@ -2,6 +2,7 @@ package tally
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -11,13 +12,15 @@ type SampleType int
 const (
 	COUNTER SampleType = iota
 	TIMER
+	STRING
 )
 
 type Sample struct {
-	key        string
-	value      float64
-	valueType  SampleType
-	sampleRate float64
+	key         string
+	value       float64
+	valueType   SampleType
+	sampleRate  float64
+	stringValue string
 }
 
 type Statgram []Sample
@@ -73,15 +76,18 @@ func ParseStatgramLine(text string) (statgram Statgram, err error) {
 
 // ParseSample decodes a formatted string encoding a sampled value. Sampled
 // values are either counts or timings, and are also associated with a sample
-// rate. The format is: <VALUE> '|' <TYPECODE> ['@' <SAMPLE_RATE>]. The <VALUE>
-// and optional <SAMPLE_RATE> tokens are floating point decimals. If the sample
-// rate annotation isn't present, then it's assumed to be 1.0 (meaning 100%).
-// The <TYPECODE> token is either 'c' or 'ms', indicating a counter value or
-// timer value, respectively.
+// rate. The format is:
+// <VALUE> '|' <TYPECODE> ['@' <SAMPLE_RATE>] ['|' <ENC_STRING>]
+// The <VALUE> and optional <SAMPLE_RATE> tokens are floating point decimals. If
+// the sample rate annotation isn't present, then it's assumed to be 1.0 (meaning
+// 100%). The <TYPECODE> token is either 'c', 'ms', or 's', indicating a counter
+// value, timer value, or string count respectively. In the case of a string
+// count, the string being counted may be given via <ENC_STRING> (where special
+// characters such as '\', '|', ':', and the newline are escaped).
 func ParseSample(key string, part string) (sample Sample, err error) {
 	fields := strings.Split(part, "|")
-	if len(fields) != 2 {
-		err = errors.New("sample field should contain exactly one '|'")
+	if len(fields) < 2 || len(fields) > 3 {
+		err = errors.New("sample field should contain one or two '|' separators")
 		return
 	}
 	var value float64
@@ -97,10 +103,29 @@ func ParseSample(key string, part string) (sample Sample, err error) {
 			return
 		}
 	}
-	if fields[1] == "ms" {
-		sample.valueType = TIMER
-	} else {
+	switch fields[1] {
+	case "c":
 		sample.valueType = COUNTER
+	case "ms":
+		sample.valueType = TIMER
+	case "s":
+		if len(fields) < 3 {
+			err = errors.New("string sample is missing its string")
+			return
+		}
+		sample.valueType = STRING
+		sample.stringValue = decodeStringSample(fields[2])
+	default:
+		err = errors.New(fmt.Sprintf("invalid sample type code %#v", fields[1]))
 	}
 	return
+}
+
+func decodeStringSample(encoded string) string {
+	s := encoded
+	s = strings.Replace(s, "\\n", "\n", -1)
+	s = strings.Replace(s, "\\&", "|", -1)
+	s = strings.Replace(s, "\\;", ":", -1)
+	s = strings.Replace(s, "\\\\", "\\", -1)
+	return s
 }
