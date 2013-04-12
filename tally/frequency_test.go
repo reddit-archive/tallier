@@ -8,7 +8,7 @@ import (
 func fc(key string, value float64) FrequencyCount {
 	c := make(MultilevelCount, 1)
 	c[0].NewBucket()
-	c[0].timestamps[0] = time.Unix(0, 0)
+	c[0].top.timestamp = time.Unix(0, 0)
 	c.Count(value)
 	return FrequencyCount{key, c}
 }
