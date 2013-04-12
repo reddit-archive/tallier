@@ -1,23 +1,37 @@
 package tally
 
 import (
+	"fmt"
 	"time"
 )
 
+type CountBucket struct {
+	value     float64
+	timestamp time.Time
+	next      *CountBucket
+}
+
+func (b *CountBucket) String() string {
+	var next string
+	if b.next != nil {
+		next = "->" + b.next.String()
+	}
+	return fmt.Sprintf("%v%s", *b, next)
+}
+
 type CountLevel struct {
-	Current    float64
-	interval   time.Duration
-	buckets    []float64
-	timestamps []time.Time
+	Current     float64
+	interval    time.Duration
+	top, bottom *CountBucket
 }
 
 func (lvl *CountLevel) Count(value float64) {
 	lvl.Current += value
-	lvl.buckets[len(lvl.buckets)-1] += value
+	lvl.bottom.value += value
 }
 
 func (lvl *CountLevel) Duration() time.Duration {
-	return time.Since(lvl.timestamps[0])
+	return time.Since(lvl.top.timestamp)
 }
 
 func (lvl *CountLevel) RatePer(unit time.Duration) float64 {
@@ -25,8 +39,13 @@ func (lvl *CountLevel) RatePer(unit time.Duration) float64 {
 }
 
 func (lvl *CountLevel) NewBucket() {
-	lvl.buckets = append(lvl.buckets, 0)
-	lvl.timestamps = append(lvl.timestamps, time.Now())
+	b := &CountBucket{0, time.Now(), nil}
+	if lvl.top == nil {
+		lvl.top = b
+	} else {
+		lvl.bottom.next = b
+	}
+	lvl.bottom = b
 }
 
 type MultilevelCount []CountLevel
@@ -53,18 +72,33 @@ func (mc MultilevelCount) Rollup() {
 	remainder := mc[1:]
 	now := time.Now()
 	total := 0.0
-	i := 0
-	for i < len(current.timestamps) && now.Sub(current.timestamps[i]) >= current.interval {
-		total += current.buckets[i]
-		i++
+	var lastRemoved *CountBucket
+	b := current.top
+	for b != nil && now.Sub(b.timestamp) >= current.interval {
+		total += b.value
+		lastRemoved = b
+		b = b.next
 	}
-	if i > 0 {
-		current.buckets = current.buckets[i:]
-		current.timestamps = current.timestamps[i:]
+	if b == nil {
+		current.top = nil
+		current.bottom = nil
+	} else {
+		current.top = b
+	}
+	if lastRemoved == nil {
+		current.NewBucket()
+	} else {
+		lastRemoved.value = 0
+		lastRemoved.next = nil
+		if current.top == nil {
+			current.top = lastRemoved
+		} else {
+			current.bottom.next = lastRemoved
+		}
+		current.bottom = lastRemoved
 		current.Current -= total
 		remainder.Rollup()
 	}
-	current.NewBucket()
 }
 
 func NewMultilevelCount(intervals ...time.Duration) MultilevelCount {
@@ -76,7 +110,7 @@ func NewMultilevelCount(intervals ...time.Duration) MultilevelCount {
 	}
 	if len(intervals) == 0 {
 		// special case to simplify testing, doesn't change functionality
-		count[0].timestamps[0] = time.Unix(0, 0)
+		count[0].top.timestamp = time.Unix(0, 0)
 	}
 	return count
 }
