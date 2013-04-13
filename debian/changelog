@@ -1,3 +1,9 @@
+tallier (1.1.2) precise; urgency=low
+
+  * reduced garbage collection load from multilevel counters
+
+ -- Logan Hanks <intortus@reddit.com>  Sat, 13 Apr 2013 12:24:17 -0700
+
 tallier (1.1.1) precise; urgency=low
 
   * fixed memory leak in multilevel counters
