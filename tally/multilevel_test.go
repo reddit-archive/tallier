@@ -1,7 +1,6 @@
 package tally
 
 import (
-	"runtime"
 	"testing"
 	"time"
 )
@@ -69,14 +68,10 @@ func TestRollup(t *testing.T) {
 
 func BenchmarkRollupMemory(b *testing.B) {
 	counter := NewMultilevelCount(
-		time.Duration(1)*time.Millisecond,
-		time.Duration(10)*time.Millisecond,
-		time.Duration(100)*time.Millisecond)
+		time.Duration(100000),
+		time.Duration(200000),
+		time.Duration(400000))
 	for i := 0; i < b.N; i++ {
 		counter.Rollup()
 	}
-	runtime.GC()
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	b.Logf("memstats: alloc=%v", ms.Alloc)
 }

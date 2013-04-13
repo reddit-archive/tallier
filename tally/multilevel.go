@@ -20,9 +20,9 @@ func (b *CountBucket) String() string {
 }
 
 type CountLevel struct {
-	Current     float64
-	interval    time.Duration
-	top, bottom *CountBucket
+	Current            float64
+	interval           time.Duration
+	top, bottom, ready *CountBucket
 }
 
 func (lvl *CountLevel) Count(value float64) {
@@ -39,13 +39,22 @@ func (lvl *CountLevel) RatePer(unit time.Duration) float64 {
 }
 
 func (lvl *CountLevel) NewBucket() {
-	b := &CountBucket{0, time.Now(), nil}
+	var b *CountBucket
+	if lvl.ready == nil {
+		b = new(CountBucket)
+	} else {
+		b = lvl.ready
+		lvl.ready = lvl.ready.next
+	}
 	if lvl.top == nil {
 		lvl.top = b
 	} else {
 		lvl.bottom.next = b
 	}
 	lvl.bottom = b
+	b.value = 0
+	b.timestamp = time.Now()
+	b.next = nil
 }
 
 type MultilevelCount []CountLevel
@@ -79,26 +88,18 @@ func (mc MultilevelCount) Rollup() {
 		lastRemoved = b
 		b = b.next
 	}
-	if b == nil {
-		current.top = nil
-		current.bottom = nil
-	} else {
-		current.top = b
-	}
-	if lastRemoved == nil {
-		current.NewBucket()
-	} else {
-		lastRemoved.value = 0
-		lastRemoved.next = nil
-		if current.top == nil {
-			current.top = lastRemoved
-		} else {
-			current.bottom.next = lastRemoved
-		}
-		current.bottom = lastRemoved
+	if lastRemoved != nil {
+		t := lastRemoved.next
 		current.Current -= total
+		lastRemoved.next = current.ready
+		current.ready = current.top
+		current.top = t
+		if current.top == nil {
+			current.bottom = nil
+		}
 		remainder.Rollup()
 	}
+	current.NewBucket()
 }
 
 func NewMultilevelCount(intervals ...time.Duration) MultilevelCount {
