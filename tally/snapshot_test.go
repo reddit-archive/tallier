@@ -61,10 +61,7 @@ func TestSnapshots(t *testing.T) {
 func TestGraphiteReport(t *testing.T) {
 	now := time.Now()
 	timestamp := fmt.Sprintf(" %d\n", now.Unix())
-	expected := []string{
-		"stats.tallier.num_stats 0" + timestamp,
-		"stats.tallier.num_workers 0" + timestamp,
-	}
+	expected := []string{}
 
 	snapshot := NewSnapshot()
 	snapshot.start = now
@@ -86,8 +83,6 @@ func TestGraphiteReport(t *testing.T) {
 		format("stats.timers.y.mean", 5.5),
 		"stats.timers.y.count 10" + timestamp,
 		format("stats.timers.y.rate", 1),
-		"stats.tallier.num_stats 2" + timestamp,
-		"stats.tallier.num_workers 1" + timestamp,
 	}
 
 	child := NewSnapshot()

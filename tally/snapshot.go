@@ -11,7 +11,13 @@ import (
 const TIMINGS_INITIAL_CAPACITY = 1024
 const STRING_COUNT_CAPACITY = 1024
 
+type ReportedValue struct {
+	value     float64
+	timestamp time.Time
+}
+
 type Snapshot struct {
+	reports              map[string]ReportedValue
 	counts               map[string]float64
 	timings              map[string][]float64
 	stringCounts         map[string]*FrequencyCounter
@@ -23,6 +29,7 @@ type Snapshot struct {
 
 func NewSnapshot() *Snapshot {
 	return &Snapshot{
+		reports:      make(map[string]ReportedValue),
 		counts:       make(map[string]float64),
 		timings:      make(map[string][]float64),
 		stringCounts: make(map[string]*FrequencyCounter),
@@ -55,6 +62,16 @@ func (snapshot *Snapshot) CountString(key, value string, count float64) {
 		snapshot.stringCounts[key] = fc
 	}
 	fc.Count(value, count)
+}
+
+func (snapshot *Snapshot) Report(key string, value float64, ts ...time.Time) {
+	var t time.Time
+	if len(ts) == 0 {
+		t = time.Now()
+	} else {
+		t = ts[0]
+	}
+	snapshot.reports[key] = ReportedValue{value, t}
 }
 
 // ProcessStatgram accumulates a statistic report into the current snapshot.
@@ -103,7 +120,7 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 		return fmt.Sprintf(format, params...) + timestamp
 	}
 	report = make([]string, 0, 2*len(snapshot.counts)+6*
-		len(snapshot.timings)+2)
+		len(snapshot.timings)+len(snapshot.reports)+2)
 	counterScale := 1.0 / snapshot.duration.Seconds()
 	for key, value := range snapshot.counts {
 		report = append(report, makeLine("stats.%s %f", key, value*counterScale))
@@ -131,14 +148,15 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 		report = append(report, makeLine("stats.timers.%s.rate %f", key,
 			float64(len(timings))/snapshot.duration.Seconds()))
 	}
-	report = append(report, makeLine("stats.tallier.num_stats %d",
-		len(snapshot.counts)+len(snapshot.timings)))
-	report = append(report, makeLine("stats.tallier.num_workers %d",
-		snapshot.numChildren))
+	for key, rvalue := range snapshot.reports {
+		report = append(report, fmt.Sprintf("stats.%s %f %d\n", key,
+			rvalue.value, rvalue.timestamp.Unix()))
+	}
 	return
 }
 
 func (snapshot *Snapshot) Flush() {
+	snapshot.reports = make(map[string]ReportedValue, len(snapshot.reports))
 	snapshot.counts = make(map[string]float64, len(snapshot.counts))
 	snapshot.timings = make(map[string][]float64, len(snapshot.timings))
 	for _, fcs := range snapshot.stringCounts {
