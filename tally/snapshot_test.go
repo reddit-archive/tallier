@@ -2,6 +2,7 @@ package tally
 
 import (
 	"fmt"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -144,4 +145,25 @@ func TestStringValueAggregation(t *testing.T) {
 	if s, ok := assertDeepEqual(expected, result); !ok {
 		t.Error(s)
 	}
+}
+
+func BenchmarkFlush(b *testing.B) {
+	Y := 1000
+	keys := make([]string, Y)
+	for i := range keys {
+		keys[i] = fmt.Sprintf("%d", i)
+	}
+	X := 10000
+	snapshot := NewSnapshot()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < X; j++ {
+			snapshot.Count(keys[i%Y], float64(j))
+			snapshot.Time(keys[i%Y], float64(j))
+		}
+		snapshot.Flush()
+		//runtime.GC()
+	}
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	b.Logf("run N=%d, pauses: %v", b.N, ms.PauseNs)
 }

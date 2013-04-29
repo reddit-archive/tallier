@@ -1,10 +1,15 @@
 package tally
 
+// #include <stdlib.h>
+import "C"
+
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"unsafe"
 )
 
 type SampleType int
@@ -25,52 +30,85 @@ type Sample struct {
 
 type Statgram []Sample
 
+type StatgramParser struct {
+	Statgram
+	Length         int
+	previousBuffer []byte
+}
+
+func NewStatgramParser() *StatgramParser {
+	return &StatgramParser{make(Statgram, 1024), 0, make([]byte, 1024)}
+}
+
 // ParseStatgram reads samples from the given text, returning a Statgram.
 // The format of a statgram is line-oriented. Each line names a key and
 // provides one or more sampled values for that key. The documentation for the
 // ParseStatgramLine function explains the formatting of each line.
-func ParseStatgram(text string) (statgram Statgram) {
-	previous := "" // for decoding front compression
-
-	lines := strings.Split(text, "\n")
-	statgram = make(Statgram, 0, len(lines))
-	total := 0
-	for _, value := range lines {
-		// check for front compression
-		if len(value) > 2 && value[0] == '^' {
-			prefixLength, err := strconv.ParseInt(value[1:3], 16, 0)
-			if err == nil && int(prefixLength) < len(previous) {
-				value = previous[:prefixLength] + value[3:]
-			}
+func (parser *StatgramParser) ParseStatgram(datagram []byte) Statgram {
+	parser.Length = 0
+	previousLen := 0
+	for i := 0; i < len(datagram); i++ {
+		j := bytes.IndexByte(datagram[i:], '\n')
+		if j == -1 {
+			j = len(datagram)
+		} else {
+			j += i
 		}
-		previous = value
-
-		subsamples, _ := ParseStatgramLine(value)
-		statgram = append(statgram, subsamples...)
-		total += len(subsamples)
+		line := datagram[i:j]
+		i = j
+		if len(line) > 2 && line[0] == '^' {
+			prefixLen, err := strconv.ParseInt(string(line[1:3]), 16, 0)
+			if err == nil && int(prefixLen) <= previousLen {
+				previousLen = int(prefixLen) + len(line) - 3
+				copy(parser.previousBuffer[prefixLen:], line[3:])
+				line = parser.previousBuffer[:previousLen]
+			}
+		} else {
+			previousLen = len(line)
+			copy(parser.previousBuffer, line)
+		}
+		parser.ParseStatgramLine(line)
 	}
-	return
+	return parser.Statgram[:parser.Length]
 }
 
 // ParseStatgramLine reads samples from one line of a statgram. This line
 // provides a key name and one or more sampled values for that key. The key name
 // and each of the values are separated by the ':' character. The format for
 // each sampled value is explained in the documentation for ParseSample.
-func ParseStatgramLine(text string) (statgram Statgram, err error) {
-	parts := strings.Split(text, ":")
-	if len(parts) == 0 {
+func (parser *StatgramParser) ParseStatgramLine(line []byte) (s Statgram,
+	err error) {
+	start := parser.Length
+	var i int
+	for ; i < len(line) && line[i] != ':'; i++ {
+	}
+	if i == len(line) {
 		return
 	}
-	key := parts[0]
-	statgram = make([]Sample, 0, len(parts)-1)
-	for _, part := range parts[1:] {
+	key := string(line[:i])
+	remainder := line[i+1:]
+	for len(remainder) > 0 {
+		part := remainder
+		i = bytes.IndexByte(part, ':')
+		if i >= 0 {
+			remainder = part[i+1:]
+			part = part[:i]
+		} else {
+			remainder = nil
+		}
 		var sample Sample
 		sample, err = ParseSample(key, part)
 		if err != nil {
 			return
 		}
-		statgram = append(statgram, sample)
+		if parser.Length >= len(parser.Statgram) {
+			parser.Statgram = append(parser.Statgram, sample)
+		} else {
+			parser.Statgram[parser.Length] = sample
+		}
+		parser.Length++
 	}
+	s = parser.Statgram[start:parser.Length]
 	return
 }
 
@@ -79,53 +117,98 @@ func ParseStatgramLine(text string) (statgram Statgram, err error) {
 // rate. The format is:
 // <VALUE> '|' <TYPECODE> ['@' <SAMPLE_RATE>] ['|' <ENC_STRING>]
 // The <VALUE> and optional <SAMPLE_RATE> tokens are floating point decimals. If
-// the sample rate annotation isn't present, then it's assumed to be 1.0 (meaning
-// 100%). The <TYPECODE> token is either 'c', 'ms', or 's', indicating a counter
-// value, timer value, or string count respectively. In the case of a string
-// count, the string being counted may be given via <ENC_STRING> (where special
-// characters such as '\', '|', ':', and the newline are escaped).
-func ParseSample(key string, part string) (sample Sample, err error) {
-	fields := strings.Split(part, "|")
-	if len(fields) < 2 || len(fields) > 3 {
+// the sample rate annotation isn't present, then it's assumed to be 1.0 (100%).
+// The <TYPECODE> token is either 'c', 'ms', or 's', indicating a counter value,
+// timer value, or string count respectively. In the case of a string count, the
+// string being counted may be given via <ENC_STRING> (where special characters
+// such as '\', '|', ':', and the newline are escaped).
+func ParseSample(key string, part []byte) (sample Sample, err error) {
+	i := bytes.IndexByte(part, '|')
+	if i < 0 {
 		err = errors.New("sample field should contain one or two '|' separators")
 		return
 	}
 	var value float64
-	if value, err = strconv.ParseFloat(fields[0], 64); err != nil {
+	part[i] = 0
+	if value, err = ParseFloat(part); err != nil {
+		return
+	}
+	remainder := part[i+1:]
+	typeCode := remainder
+	var suffix []byte
+	i = bytes.IndexByte(remainder, '|')
+	if i >= 0 {
+		typeCode = remainder[:i]
+		suffix = remainder[i+1:]
+	}
+	if len(typeCode) == 0 {
+		err = errors.New("sample type code missing")
 		return
 	}
 	sample = Sample{key: key, value: value, sampleRate: 1.0}
-	if strings.Contains(fields[1], "@") {
-		f1Parts := strings.SplitN(fields[1], "@", 2)
-		fields[1] = f1Parts[0]
-		sample.sampleRate, err = strconv.ParseFloat(f1Parts[1], 64)
+	if j := bytes.IndexByte(typeCode, '@'); j >= 0 {
+		copy(typeCode[j:], typeCode[j+1:])
+		typeCode[len(typeCode)-1] = 0
+		sample.sampleRate, err = ParseFloat(typeCode[j:])
 		if err != nil {
 			return
 		}
+		typeCode = typeCode[:j]
 	}
-	switch fields[1] {
-	case "c":
+	switch typeCode[0] {
+	case 'c':
 		sample.valueType = COUNTER
-	case "ms":
+	case 'm':
 		sample.valueType = TIMER
-	case "s":
-		if len(fields) < 3 {
-			err = errors.New("string sample is missing its string")
-			return
-		}
+	case 's':
 		sample.valueType = STRING
-		sample.stringValue = decodeStringSample(fields[2])
+		sample.stringValue = decodeStringSample(suffix)
 	default:
-		err = errors.New(fmt.Sprintf("invalid sample type code %#v", fields[1]))
+		err = errors.New(fmt.Sprintf("invalid sample type code %#v", typeCode))
 	}
 	return
 }
 
-func decodeStringSample(encoded string) string {
-	s := encoded
-	s = strings.Replace(s, "\\n", "\n", -1)
-	s = strings.Replace(s, "\\&", "|", -1)
-	s = strings.Replace(s, "\\;", ":", -1)
-	s = strings.Replace(s, "\\\\", "\\", -1)
-	return s
+var stringSampleReplacer *strings.Replacer
+
+// Decodes a string sample in-place.
+func decodeStringSample(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	var i, j int
+	for ; i < len(b); i++ {
+		if b[i] == '\\' && i < len(b)-1 {
+			i++
+			switch b[i] {
+			case '&':
+				b[j] = '|'
+			case ';':
+				b[j] = ':'
+			case 'n':
+				b[j] = '\n'
+			case '\\':
+				b[j] = '\\'
+			default:
+				b[j] = b[i-1]
+				j++
+				b[j] = b[i]
+			}
+		} else {
+			b[j] = b[i]
+		}
+		j++
+	}
+	return string(b[:j])
+}
+
+// b must be NUL-terminated
+func ParseFloat(b []byte) (f float64, e error) {
+	cbuf := (*C.char)(unsafe.Pointer(&b[0]))
+	endptr := (*C.char)(nil)
+	f = float64(C.strtod(cbuf, &endptr))
+	if endptr == cbuf {
+		e = errors.New("error parsing float")
+	}
+	return
 }

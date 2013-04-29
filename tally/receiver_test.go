@@ -2,12 +2,15 @@ package tally
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"os"
+	"runtime"
 	"testing"
 )
 
 func TestReceiveOnce(t *testing.T) {
-	receiver := new(Receiver)
+	receiver := NewReceiver()
 	receiver.conn = bytes.NewBufferString("x:1|c")
 	expected := Statgram{Sample{"x", 1.0, COUNTER, 1.0, ""}}
 
@@ -47,7 +50,7 @@ func (r *CoordinatedReader) Close() error {
 
 func TestReceiveStatgrams(t *testing.T) {
 	conn := make(CoordinatedReader)
-	receiver := new(Receiver)
+	receiver := NewReceiver()
 	receiver.conn = &conn
 	statgrams := receiver.ReceiveStatgrams()
 
@@ -87,4 +90,21 @@ func TestRunReceiver(t *testing.T) {
 	if s, ok := assertDeepEqual(expected, snapshot); !ok {
 		t.Error(s)
 	}
+}
+
+func BenchmarkRunReceiver(b *testing.B) {
+	bs := []byte("x:1|c:2|c\ny:1|m@0.5:e\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c")
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	s := ms.HeapObjects
+	conn := make(CoordinatedReader)
+	notifier := make(chan Statgram)
+	RunReceiver("test", &conn, notifier)
+	for i := 0; i < b.N; i++ {
+		conn.Write(bs)
+		<-notifier
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&ms)
+	fmt.Fprintf(os.Stderr, "N=%d, heap objects: %d\n", b.N, ms.HeapObjects-s)
 }

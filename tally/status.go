@@ -182,9 +182,10 @@ func stringPage(req *StatusRequest, key string) {
 			"rank": i + 1,
 		}
 		for j, level := range levels {
+			c := (*(item.count))[j+1]
 			data[i][level] = map[string]interface{}{
-				"rate":  item.count[j+1].RatePer(time.Second),
-				"total": item.count[j+1].Current,
+				"rate":  c.RatePer(time.Second),
+				"total": c.Current,
 			}
 		}
 	}

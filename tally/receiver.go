@@ -19,19 +19,27 @@ type Receiver struct {
 	messageCount     int64
 	lastByteCount    int64
 	byteCount        int64
+	readBuf          []byte
+	parser           *StatgramParser
+}
+
+func NewReceiver() *Receiver {
+	return &Receiver{
+		readBuf: make([]byte, STATGRAM_MAXSIZE),
+		parser:  NewStatgramParser(),
+	}
 }
 
 // ReadOnce blocks on the listening connection until a statgram arrives. It
 // takes care of parsing it and returns it. Any parse errors are ignored, so
 // it's possible an empty statgram will be returned.
-func (receiver *Receiver) ReadOnce() (statgram Statgram, err error) {
-	buf := make([]byte, STATGRAM_MAXSIZE)
+func (receiver *Receiver) ReadOnce() (s Statgram, err error) {
 	var size int
-	size, err = receiver.conn.Read(buf)
+	size, err = receiver.conn.Read(receiver.readBuf)
 	if err == nil {
 		receiver.messageCount += 1
 		receiver.byteCount += int64(size)
-		statgram = ParseStatgram(string(buf[:size]))
+		s = receiver.parser.ParseStatgram(receiver.readBuf[:size])
 	}
 	return
 }
@@ -39,7 +47,14 @@ func (receiver *Receiver) ReadOnce() (statgram Statgram, err error) {
 // ReceiveStatgrams spins off a goroutine to read statgrams off the UDP port.
 // Returns a buffered channel that will receive statgrams as they arrive.
 func (receiver *Receiver) ReceiveStatgrams() (statgrams chan Statgram) {
-	statgrams = make(chan Statgram, STATGRAM_CHANNEL_BUFSIZE)
+	statgrams = make(chan Statgram, 0) //STATGRAM_CHANNEL_BUFSIZE)
+
+	// Use double-buffering to collect parsed statgrams. We copy into one,
+	// then swap so we can send the other over the channel while copying in the
+	// next statgram.
+	processing1 := make(Statgram, STATGRAM_MAXSIZE)
+	processing2 := make(Statgram, STATGRAM_MAXSIZE)
+
 	go func() {
 		for {
 			statgram, err := receiver.ReadOnce()
@@ -47,7 +62,12 @@ func (receiver *Receiver) ReceiveStatgrams() (statgrams chan Statgram) {
 				close(statgrams)
 				break
 			}
-			statgrams <- statgram
+
+			copy(processing1, statgram)
+			// swap the buffers so we don't overwrite the statgram being
+			// processed with the next one we read
+			processing1, processing2 = processing2, processing1
+			statgrams <- processing2[:len(statgram)]
 		}
 	}()
 	return
@@ -61,10 +81,9 @@ func (receiver *Receiver) ReceiveStatgrams() (statgrams chan Statgram) {
 // to facilitate testing.
 func RunReceiver(id string, conn io.Reader,
 	notifiers ...chan Statgram) (controlChannel chan *Snapshot) {
-	receiver := &Receiver{
-		id:   id,
-		conn: conn,
-	}
+	receiver := NewReceiver()
+	receiver.id = id
+	receiver.conn = conn
 	snapshot := NewSnapshot()
 	controlChannel = make(chan *Snapshot)
 	statgrams := receiver.ReceiveStatgrams()

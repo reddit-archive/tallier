@@ -25,6 +25,16 @@ type CountLevel struct {
 	top, bottom, ready *CountBucket
 }
 
+func (lvl *CountLevel) Reset() {
+	lvl.Current = 0
+	if lvl.top != nil {
+		lvl.bottom.next = lvl.ready
+		lvl.ready = lvl.top.next
+		lvl.top.next = nil
+		lvl.bottom = lvl.top
+	}
+}
+
 func (lvl *CountLevel) Count(value float64) {
 	lvl.Current += value
 	lvl.bottom.value += value
@@ -58,6 +68,12 @@ func (lvl *CountLevel) NewBucket() {
 }
 
 type MultilevelCount []CountLevel
+
+func (mc MultilevelCount) Reset() {
+	for i, _ := range mc {
+		mc[i].Reset()
+	}
+}
 
 func (mc MultilevelCount) Count(value float64) {
 	for i, _ := range mc {
@@ -102,7 +118,7 @@ func (mc MultilevelCount) Rollup() {
 	current.NewBucket()
 }
 
-func NewMultilevelCount(intervals ...time.Duration) MultilevelCount {
+func NewMultilevelCount(intervals ...time.Duration) *MultilevelCount {
 	count := make(MultilevelCount, len(intervals)+1)
 	count[0].NewBucket()
 	for i, interval := range intervals {
@@ -113,5 +129,5 @@ func NewMultilevelCount(intervals ...time.Duration) MultilevelCount {
 		// special case to simplify testing, doesn't change functionality
 		count[0].top.timestamp = time.Unix(0, 0)
 	}
-	return count
+	return &count
 }

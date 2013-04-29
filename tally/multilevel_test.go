@@ -6,7 +6,7 @@ import (
 )
 
 func TestCount(t *testing.T) {
-	counter := NewMultilevelCount(time.Minute, time.Hour)
+	counter := *NewMultilevelCount(time.Minute, time.Hour)
 	counter.Count(1)
 	for i := 0; i < len(counter); i++ {
 		if counter[i].Current != 1 {
@@ -17,7 +17,7 @@ func TestCount(t *testing.T) {
 }
 
 func TestRollup(t *testing.T) {
-	counter := NewMultilevelCount(time.Minute, time.Hour,
+	counter := *NewMultilevelCount(time.Minute, time.Hour,
 		time.Duration(24)*time.Hour)
 	for i := 0; i < 3; i++ {
 		counter[i].top.timestamp = time.Now().Add(-counter[i].interval)

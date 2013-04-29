@@ -1,23 +1,26 @@
 package tally
 
 import (
+	"fmt"
+	"os"
+	"runtime"
 	"testing"
 )
 
 func TestParseSample(t *testing.T) {
-	_, err := ParseSample("test", "")
+	_, err := ParseSample("test", nil)
 	if err == nil {
 		t.Error("expected error")
 	}
-	_, err = ParseSample("test", "||")
+	_, err = ParseSample("test", []byte("||"))
 	if err == nil {
 		t.Error("expected error")
 	}
-	_, err = ParseSample("test", "x|")
+	_, err = ParseSample("test", []byte("x|"))
 	if err == nil {
 		t.Error("expected error")
 	}
-	_, err = ParseSample("test", "1|x@y")
+	_, err = ParseSample("test", []byte("1|x@y"))
 	if err == nil {
 		t.Error("expected error")
 	}
@@ -28,26 +31,27 @@ func TestParseSample(t *testing.T) {
 		valueType:  TIMER,
 		sampleRate: 0.1,
 	}
-	sample, _ := ParseSample("test", "3.5|ms@0.1")
+	sample, _ := ParseSample("test", []byte("3.5|ms@0.1"))
 	if expected != sample {
 		t.Errorf("expected %#v, got %#v", expected, sample)
 	}
 
 	expected.valueType = COUNTER
-	sample, _ = ParseSample("test", "3.5|c@0.1")
+	sample, _ = ParseSample("test", []byte("3.5|c@0.1"))
 	if expected != sample {
 		t.Errorf("expected %#v, got %#v", expected, sample)
 	}
 
 	expected.sampleRate = 1.0
-	sample, _ = ParseSample("test", "3.5|c")
+	sample, _ = ParseSample("test", []byte("3.5|c"))
 	if expected != sample {
 		t.Errorf("expected %#v, got %#v", expected, sample)
 	}
 }
 
 func TestParseStatgramLine(t *testing.T) {
-	statgram, err := ParseStatgramLine("")
+	parser := NewStatgramParser()
+	statgram, err := parser.ParseStatgramLine(nil)
 	if err != nil {
 		t.Error("expected empty statgram, got error:", err)
 	}
@@ -55,7 +59,7 @@ func TestParseStatgramLine(t *testing.T) {
 		t.Errorf("expected empty statgram, got %#v", statgram)
 	}
 
-	statgram, _ = ParseStatgramLine("test")
+	statgram, err = parser.ParseStatgramLine([]byte("test"))
 	if err != nil {
 		t.Error("expected empty statgram, got error:", err)
 	}
@@ -67,7 +71,7 @@ func TestParseStatgramLine(t *testing.T) {
 		Sample{key: "test", value: 1.0, valueType: COUNTER, sampleRate: 1.0},
 		Sample{key: "test", value: 2.0, valueType: TIMER, sampleRate: 0.1},
 	}
-	statgram, err = ParseStatgramLine("test:1|c:2|ms@0.1")
+	statgram, err = parser.ParseStatgramLine([]byte("test:1|c:2|ms@0.1"))
 	if err != nil {
 		t.Error("expected statgram, got error:", err)
 	}
@@ -75,7 +79,8 @@ func TestParseStatgramLine(t *testing.T) {
 		t.Error(s)
 	}
 
-	statgram, err = ParseStatgramLine("test:0|s|x:0|s|a\\nb\\&c\\\\d\\;e:0|s|y")
+	statgram, err = parser.ParseStatgramLine(
+		[]byte("test:0|s|x:0|s|a\\nb\\&c\\\\d\\;e:0|s|y"))
 	expected = Statgram{
 		Sample{key: "test", valueType: STRING, sampleRate: 1.0,
 			stringValue: "x"},
@@ -91,7 +96,7 @@ func TestParseStatgramLine(t *testing.T) {
 		t.Error(s)
 	}
 
-	statgram, err = ParseStatgramLine("test:1|c:error")
+	_, err = parser.ParseStatgramLine([]byte("test:1|c:error"))
 	if err == nil {
 		t.Error("expected error, got:", statgram)
 	}
@@ -106,16 +111,31 @@ func TestParseStatgram(t *testing.T) {
 			sampleRate: 1.0},
 		Sample{key: "z", value: 0.1, valueType: COUNTER, sampleRate: 1.0},
 	}
-	statgram := ParseStatgram(
-		"x:1|c:2|c\ny:1|ms@0.5:error\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c")
+	parser := NewStatgramParser()
+	statgram := parser.ParseStatgram(
+		[]byte("x:1|c:2|c\ny:1|ms@0.5:err\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c"))
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
 
-	statgram = ParseStatgram(
-		"x:1|c\n^022|c\ny:1|ms@0.5:error\n^fferror\n" +
-			"s:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c")
+	statgram = parser.ParseStatgram(
+		[]byte("x:1|c\n^022|c\ny:1|ms@0.5:error\n^fferror\n" +
+			"s:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c"))
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
+}
+
+func BenchmarkParseStatgram(b *testing.B) {
+	bs := []byte("x:1|c:2|c\ny:1|m@0.5:e\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c")
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	s := ms.HeapObjects
+	parser := NewStatgramParser()
+	for i := 0; i < b.N; i++ {
+		parser.ParseStatgram(bs)
+	}
+	runtime.GC()
+	runtime.ReadMemStats(&ms)
+	fmt.Fprintf(os.Stderr, "N=%d, heap objects: %d\n", b.N, ms.HeapObjects-s)
 }

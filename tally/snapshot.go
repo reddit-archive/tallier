@@ -156,9 +156,15 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 }
 
 func (snapshot *Snapshot) Flush() {
-	snapshot.reports = make(map[string]ReportedValue, len(snapshot.reports))
-	snapshot.counts = make(map[string]float64, len(snapshot.counts))
-	snapshot.timings = make(map[string][]float64, len(snapshot.timings))
+	for k, _ := range snapshot.reports {
+		delete(snapshot.reports, k)
+	}
+	for k, _ := range snapshot.counts {
+		delete(snapshot.counts, k)
+	}
+	for k, ts := range snapshot.timings {
+		snapshot.timings[k] = ts[:0]
+	}
 	for _, fcs := range snapshot.stringCounts {
 		fcs.Trim()
 	}
