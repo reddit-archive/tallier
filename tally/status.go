@@ -113,7 +113,7 @@ func (stringsPage) getTemplate() string {
   <table>
     <thead>
       <tr>
-        <th>rank</th><th>string</th><th>minute</th><th>hour</th><th>day</th>
+        <th>rank</th><th>string</th><th>minute</th><th>hour</th>
       </tr>
     </thead>
     <tbody>
@@ -123,7 +123,6 @@ func (stringsPage) getTemplate() string {
           <td>{{.key}}</td>
           <td>{{printf "%.2g" .minute.rate}} ({{.minute.total}})</td>
           <td>{{printf "%.2g" .hour.rate}} ({{.hour.total}})</td>
-          <td>{{printf "%.2g" .day.rate}} ({{.day.total}})</td>
         </tr>
       {{end}}
     </tbody>
@@ -174,7 +173,7 @@ func stringPage(req *StatusRequest, key string) {
 		return
 	}
 	items := fcs.SortedItems()
-	levels := []string{"minute", "hour", "day"}
+	levels := []string{"minute", "hour"}
 	data := make([]map[string]interface{}, len(items))
 	for i, item := range items {
 		data[i] = map[string]interface{}{
