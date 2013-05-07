@@ -2,6 +2,7 @@ package tally
 
 import (
 	"fmt"
+	"runtime"
 	"sort"
 	"testing"
 	"time"
@@ -61,10 +62,7 @@ func TestSnapshots(t *testing.T) {
 func TestGraphiteReport(t *testing.T) {
 	now := time.Now()
 	timestamp := fmt.Sprintf(" %d\n", now.Unix())
-	expected := []string{
-		"stats.tallier.num_stats 0" + timestamp,
-		"stats.tallier.num_workers 0" + timestamp,
-	}
+	expected := []string{}
 
 	snapshot := NewSnapshot()
 	snapshot.start = now
@@ -86,8 +84,6 @@ func TestGraphiteReport(t *testing.T) {
 		format("stats.timers.y.mean", 5.5),
 		"stats.timers.y.count 10" + timestamp,
 		format("stats.timers.y.rate", 1),
-		"stats.tallier.num_stats 2" + timestamp,
-		"stats.tallier.num_workers 1" + timestamp,
 	}
 
 	child := NewSnapshot()
@@ -149,4 +145,25 @@ func TestStringValueAggregation(t *testing.T) {
 	if s, ok := assertDeepEqual(expected, result); !ok {
 		t.Error(s)
 	}
+}
+
+func BenchmarkFlush(b *testing.B) {
+	Y := 1000
+	keys := make([]string, Y)
+	for i := range keys {
+		keys[i] = fmt.Sprintf("%d", i)
+	}
+	X := 10000
+	snapshot := NewSnapshot()
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < X; j++ {
+			snapshot.Count(keys[i%Y], float64(j))
+			snapshot.Time(keys[i%Y], float64(j))
+		}
+		snapshot.Flush()
+		//runtime.GC()
+	}
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	b.Logf("run N=%d, pauses: %v", b.N, ms.PauseNs)
 }

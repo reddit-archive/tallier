@@ -7,7 +7,7 @@ import (
 
 type FrequencyCount struct {
 	key   string
-	count MultilevelCount
+	count *MultilevelCount
 }
 
 type FrequencyCountSlice []FrequencyCount
@@ -29,7 +29,8 @@ type FrequencyCounter struct {
 	intervals          []time.Duration
 	oversampleCapacity int
 	totalObserved      float64
-	frequencies        map[string]MultilevelCount
+	frequencies        map[string]*MultilevelCount
+	reclamationQueue   []*MultilevelCount
 }
 
 func NewFrequencyCounter(capacity int,
@@ -38,16 +39,28 @@ func NewFrequencyCounter(capacity int,
 		capacity:           capacity,
 		intervals:          intervals,
 		oversampleCapacity: capacity,
-		frequencies:        make(map[string]MultilevelCount),
+		frequencies:        make(map[string]*MultilevelCount),
+		reclamationQueue:   make([]*MultilevelCount, 0),
 	}
+}
+
+func (fcr *FrequencyCounter) newKey(key string) (mc *MultilevelCount) {
+	if len(fcr.reclamationQueue) > 0 {
+		i := len(fcr.reclamationQueue) - 1
+		mc = fcr.reclamationQueue[i]
+		fcr.reclamationQueue = fcr.reclamationQueue[:i]
+	} else {
+		mc = NewMultilevelCount(fcr.intervals...)
+	}
+	fcr.frequencies[key] = mc
+	return
 }
 
 func (fcr *FrequencyCounter) Count(key string, count float64) {
 	fcr.totalObserved += count
 	mc, ok := fcr.frequencies[key]
 	if !ok {
-		fcr.frequencies[key] = NewMultilevelCount(fcr.intervals...)
-		mc = fcr.frequencies[key]
+		mc = fcr.newKey(key)
 	}
 	mc.Count(count)
 }
@@ -55,10 +68,17 @@ func (fcr *FrequencyCounter) Count(key string, count float64) {
 func (fcr *FrequencyCounter) Trim() {
 	items := fcr.SortedItems()
 	for i, item := range items {
+		c := fcr.frequencies[item.key]
+		if c == nil {
+			errorlog("freq key %s resolved to nil!\n", item.key)
+			continue
+		}
 		if i < fcr.capacity+fcr.oversampleCapacity {
-			fcr.frequencies[item.key].Rollup()
+			c.Rollup()
 		} else {
-			delete(fcr.frequencies, items[i].key)
+			c.Reset()
+			fcr.reclamationQueue = append(fcr.reclamationQueue, c)
+			delete(fcr.frequencies, item.key)
 		}
 	}
 }

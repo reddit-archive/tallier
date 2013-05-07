@@ -10,7 +10,7 @@ func fc(key string, value float64) FrequencyCount {
 	c[0].NewBucket()
 	c[0].top.timestamp = time.Unix(0, 0)
 	c.Count(value)
-	return FrequencyCount{key, c}
+	return FrequencyCount{key, &c}
 }
 
 func TestSortedItems(t *testing.T) {
@@ -42,6 +42,19 @@ func TestTrim(t *testing.T) {
 	}
 	fcr.Trim()
 	result := fcr.SortedItems()
+	if s, ok := assertDeepEqual(expected, result); !ok {
+		t.Error(s)
+	}
+
+	for count, key := range []string{"a", "b", "c", "d"} {
+		fcr.Count(key, float64(count))
+	}
+	expected = FrequencyCountSlice{
+		fc("d", 6),
+		fc("c", 4),
+	}
+	fcr.Trim()
+	result = fcr.SortedItems()
 	if s, ok := assertDeepEqual(expected, result); !ok {
 		t.Error(s)
 	}
