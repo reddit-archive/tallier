@@ -1,3 +1,12 @@
+tallier (1.1.3) precise; urgency=low
+
+  * optimized the datagram parsing code, now 3X faster
+  * optimized memory management of multilevel counters
+  * removed day interval from multilevel counters for better GC performance
+  * added memory stats to reports sent to graphite
+
+ -- Logan Hanks <intortus@reddit.com>  Tue, 07 May 2013 14:13:46 -0700
+
 tallier (1.1.2) precise; urgency=low
 
   * reduced garbage collection load from multilevel counters
