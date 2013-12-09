@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	STATGRAM_CHANNEL_BUFSIZE = 1024
-	STATGRAM_MAXSIZE         = 1024
+	STATGRAM_MAXSIZE = 10240
 )
 
 // Receivers share the work of listening on a UDP port and accumulating stats.
@@ -47,7 +46,7 @@ func (receiver *Receiver) ReadOnce() (s Statgram, err error) {
 // ReceiveStatgrams spins off a goroutine to read statgrams off the UDP port.
 // Returns a buffered channel that will receive statgrams as they arrive.
 func (receiver *Receiver) ReceiveStatgrams() (statgrams chan Statgram) {
-	statgrams = make(chan Statgram, 0) //STATGRAM_CHANNEL_BUFSIZE)
+	statgrams = make(chan Statgram, 0)
 
 	// Use double-buffering to collect parsed statgrams. We copy into one,
 	// then swap so we can send the other over the channel while copying in the
