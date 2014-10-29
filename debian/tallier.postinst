@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+TALLIER_USER=Debian-tallier
+
+case "$1" in
+  configure)
+    adduser --home /var/lib/tallier --system $TALLIER_USER
+    ;;
+esac
+
+#DEBHELPER#

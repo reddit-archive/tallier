@@ -19,6 +19,7 @@ binary-arch: clean
 	GOPATH=${GOPATH} go build -v -o ${GOPATH}/bin/tallier ${GOPKG}
 	dh_install /usr/lib/gocode/bin/tallier /usr/bin
 	dh_strip
+	dh_installinit
 	dh_installchangelogs
 	dh_installdocs
 	dh_installdeb

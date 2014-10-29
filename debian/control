@@ -9,6 +9,6 @@ Vcs-Git: git://github.com/reddit/tallier.git
 
 Package: tallier
 Architecture: amd64
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, adduser (>= 3.11)
 Description: Stats collecting server
  Receives stats via UDP and periodically sends cumulative reports to Graphite.
