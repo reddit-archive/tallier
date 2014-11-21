@@ -1,13 +1,20 @@
 package tally
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 )
+
+// apparently we need to import this here to make go able to verify
+// certs properly. see: https://code.google.com/p/go/issues/detail?id=5058
+import _ "crypto/sha512"
 
 type HaroldPoster interface {
 	Post(path []string, data map[string]string) (*http.Response, error)
@@ -17,9 +24,10 @@ type HaroldPoster interface {
 // harold to let it know we're alive.
 // See more at https://github.com/spladug/harold.
 type Harold struct {
-	address string
+	baseUrl *url.URL
 	secret  string
 	poster  HaroldPoster
+	client  *http.Client
 }
 
 func makeParams(data map[string]string) (values url.Values) {
@@ -32,8 +40,15 @@ func makeParams(data map[string]string) (values url.Values) {
 
 func NewHarold(address string, secret string,
 	options ...interface{}) (harold *Harold, err error) {
-	harold = &Harold{address: address, secret: secret}
+	baseUrl, err := url.Parse(address)
+	if err != nil {
+		panic("unable to parse harold url")
+	}
+
+	harold = &Harold{baseUrl: baseUrl, secret: secret}
 	harold.poster = harold
+	harold.client = &http.Client{}
+
 	for _, option := range options {
 		switch option.(type) {
 		case HaroldPoster:
@@ -46,14 +61,29 @@ func NewHarold(address string, secret string,
 	return
 }
 
-func (harold *Harold) makeUrl(path ...string) string {
-	return fmt.Sprintf("http://%s/harold/%s/%s", harold.address,
-		strings.Join(path, "/"), harold.secret)
+func (harold *Harold) makeUrl(pathParts ...string) string {
+	url := *harold.baseUrl
+	url.Path = path.Join(url.Path, "harold", path.Join(pathParts...))
+	return url.String()
 }
 
 func (harold *Harold) Post(path []string,
 	data map[string]string) (*http.Response, error) {
-	return http.PostForm(harold.makeUrl(path...), makeParams(data))
+	params := makeParams(data).Encode()
+
+	request, err := http.NewRequest("POST", harold.makeUrl(path...), strings.NewReader(params))
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Add("User-Agent", "tallier")
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	mac := hmac.New(sha1.New, []byte(harold.secret))
+	mac.Write([]byte(params))
+	request.Header.Add("X-Hub-Signature", fmt.Sprintf("sha1=%x", mac.Sum(nil)))
+
+	return harold.client.Do(request)
 }
 
 // Heartbeat sends a heartbeat message to harold, blocking until acknowledged.
