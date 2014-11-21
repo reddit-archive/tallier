@@ -17,6 +17,7 @@ binary-arch: clean
 	find . -path ./debian -prune -o -type f -name '*.go' -exec tar cf - {} + \
 		| (cd "${GOPATH}/src/${GOPKG}" && tar xvf -)
 	GOPATH=${GOPATH} go build -v -o ${GOPATH}/bin/tallier ${GOPKG}
+	GOPATH=${GOPATH} go test ${GOPKG}/tally
 	dh_install /usr/lib/gocode/bin/tallier /usr/bin
 	dh_strip
 	dh_installinit
