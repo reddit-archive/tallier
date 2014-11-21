@@ -66,18 +66,18 @@ func TestHeartMonitor(t *testing.T) {
 }
 
 func TestMakeUrl(t *testing.T) {
-	harold, err := NewHarold("address", "secret")
+	harold, err := NewHarold("https://host/base", "secret")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	expected := "http://address/harold/x/secret"
+	expected := "https://host/base/harold/x"
 	result := harold.makeUrl("x")
 	if expected != result {
 		t.Errorf("expected %v, result was %v", expected, result)
 	}
 
-	expected = "http://address/harold/x/y/z/secret"
+	expected = "https://host/base/harold/x/y/z"
 	result = harold.makeUrl("x", "y", "z")
 	if expected != result {
 		t.Errorf("expected %v, result was %v", expected, result)

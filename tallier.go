@@ -33,7 +33,7 @@ var graphiteFlag = flag.String("graphite", "",
 	"address of graphite (carbon) server")
 
 var haroldFlag = flag.String("harold", "",
-	"address of harold service (REQUIRES -haroldSecret)")
+	"base url of harold service (REQUIRES -haroldSecret)")
 
 var haroldSecretFlag = flag.String("haroldSecret", "",
 	"secret for authenticating with harold service")
