@@ -110,10 +110,35 @@ type stringsPage struct{}
 func (stringsPage) getTemplate() string {
 	return `
 {{if .str}}
+  <style>
+    th {
+        padding-right: 2em;
+        text-align: left;
+    }
+
+    th[colspan="2"] {
+        text-align: center;
+    }
+
+    td {
+        padding-right: 2em;
+    }
+  </style>
+
   <table>
     <thead>
       <tr>
-        <th>rank</th><th>string</th><th>minute</th><th>hour</th>
+        <th colspan="2"></th>
+        <th colspan="2">minute</th>
+        <th colspan="2">hour</th>
+      </tr>
+      <tr>
+        <th>rank</th>
+        <th>string</th>
+        <th>rate</th>
+        <th>total</th>
+        <th>rate</th>
+        <th>total</th>
       </tr>
     </thead>
     <tbody>
@@ -121,8 +146,10 @@ func (stringsPage) getTemplate() string {
         <tr>
           <td>{{.rank}}</td>
           <td>{{.key}}</td>
-          <td>{{printf "%.2f" .minute.rate}} ({{.minute.total}})</td>
-          <td>{{printf "%.2f" .hour.rate}} ({{.hour.total}})</td>
+          <td>{{printf "%.2f" .minute.rate}}</td>
+          <td>{{.minute.total}}</td>
+          <td>{{printf "%.2f" .hour.rate}}</td>
+          <td>{{.hour.total}}</td>
         </tr>
       {{end}}
     </tbody>
