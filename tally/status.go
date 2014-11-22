@@ -121,8 +121,8 @@ func (stringsPage) getTemplate() string {
         <tr>
           <td>{{.rank}}</td>
           <td>{{.key}}</td>
-          <td>{{printf "%.2g" .minute.rate}} ({{.minute.total}})</td>
-          <td>{{printf "%.2g" .hour.rate}} ({{.hour.total}})</td>
+          <td>{{printf "%.2f" .minute.rate}} ({{.minute.total}})</td>
+          <td>{{printf "%.2f" .hour.rate}} ({{.hour.total}})</td>
         </tr>
       {{end}}
     </tbody>
