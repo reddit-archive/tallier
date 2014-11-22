@@ -1,3 +1,10 @@
+tallier (1.2.0) precise; urgency=medium
+
+  * use new harold configuration and authentication systems
+  * minor improvements to http status page readability
+
+ -- Neil Williams <neil@reddit.com>  Sat, 22 Nov 2014 13:13:06 -0800
+
 tallier (1.1.5) precise; urgency=low
 
   * Add upstart script and default config file.
