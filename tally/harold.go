@@ -3,6 +3,9 @@ package tally
 import (
 	"crypto/hmac"
 	"crypto/sha1"
+	// apparently we need to import this here to make go able to verify
+	// certs properly. see: https://code.google.com/p/go/issues/detail?id=5058
+	_ "crypto/sha512"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,10 +14,6 @@ import (
 	"strings"
 	"time"
 )
-
-// apparently we need to import this here to make go able to verify
-// certs properly. see: https://code.google.com/p/go/issues/detail?id=5058
-import _ "crypto/sha512"
 
 type HaroldPoster interface {
 	Post(path []string, data map[string]string) (*http.Response, error)
