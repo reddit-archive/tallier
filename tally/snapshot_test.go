@@ -81,6 +81,7 @@ func TestGraphiteReport(t *testing.T) {
 		format("stats.timers.y.lower", 1),
 		format("stats.timers.y.upper", 10),
 		format("stats.timers.y.upper_90", 9),
+		format("stats.timers.y.upper_99", 10),
 		format("stats.timers.y.mean", 5.5),
 		"stats.timers.y.count 10" + timestamp,
 		format("stats.timers.y.rate", 1),
