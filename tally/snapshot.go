@@ -145,8 +145,6 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 			timings[int(math.Ceil(0.99*float64(len(timings)))-1)]))
 		report = append(report, makeLine("stats.timers.%s.mean %f", key,
 			sum/float64(len(timings))))
-		report = append(report, makeLine("stats.timers.%s.count %d", key,
-			len(timings)))
 		report = append(report, makeLine("stats.timers.%s.rate %f", key,
 			float64(len(timings))/snapshot.duration.Seconds()))
 	}
