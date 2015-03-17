@@ -20,6 +20,8 @@ const (
 	STRING
 )
 
+const MAX_LINE_LEN = 1024
+
 type Sample struct {
 	key         string
 	value       float64
@@ -37,7 +39,7 @@ type StatgramParser struct {
 }
 
 func NewStatgramParser() *StatgramParser {
-	return &StatgramParser{make(Statgram, 1024), 0, make([]byte, 1024)}
+	return &StatgramParser{make(Statgram, 1024), 0, make([]byte, MAX_LINE_LEN)}
 }
 
 // ParseStatgram reads samples from the given text, returning a Statgram.
@@ -60,14 +62,23 @@ func (parser *StatgramParser) ParseStatgram(datagram []byte) Statgram {
 			prefixLen, err := strconv.ParseInt(string(line[1:3]), 16, 0)
 			if err == nil && int(prefixLen) <= previousLen {
 				previousLen = int(prefixLen) + len(line) - 3
-				copy(parser.previousBuffer[prefixLen:], line[3:])
-				line = parser.previousBuffer[:previousLen]
+				if previousLen <= MAX_LINE_LEN {
+					copy(parser.previousBuffer[prefixLen:], line[3:])
+					line = parser.previousBuffer[:previousLen]
+				} else {
+					line = nil
+				}
+			} else {
+				line = nil
 			}
 		} else {
 			previousLen = len(line)
 			copy(parser.previousBuffer, line)
 		}
-		parser.ParseStatgramLine(line)
+
+		if line != nil {
+			parser.ParseStatgramLine(line)
+		}
 	}
 	return parser.Statgram[:parser.Length]
 }
