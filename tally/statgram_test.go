@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -121,6 +122,22 @@ func TestParseStatgram(t *testing.T) {
 	statgram = parser.ParseStatgram(
 		[]byte("x:1|c\n^022|c\ny:1|ms@0.5:error\n^fferror\n" +
 			"s:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c"))
+	if s, ok := assertDeepEqual(expected, statgram); !ok {
+		t.Error(s)
+	}
+}
+
+func TestLongCompressedStatgramLine(t *testing.T) {
+	expected := Statgram{
+		Sample{key: strings.Repeat("a", 255), value:1.0, valueType: COUNTER, sampleRate: 1.0},
+		Sample{key: "test", value: 1.0, valueType: COUNTER, sampleRate: 1.0},
+	}
+
+	parser := NewStatgramParser()
+	// 255 "a"s plus 769 "b"s is 1024 which will take us over the limit
+	statgram := parser.ParseStatgram(
+		[]byte(strings.Repeat("a", 255) + ":1|c\n^ff" + strings.Repeat("b", 769) + ":1|c\n^02bad:1|c\ntest:1|c"))
+
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
