@@ -136,7 +136,7 @@ func TestLongCompressedStatgramLine(t *testing.T) {
 	parser := NewStatgramParser()
 	// 255 "a"s plus 769 "b"s is 1024 which will take us over the limit
 	statgram := parser.ParseStatgram(
-		[]byte(strings.Repeat("a", 255) + ":1|c\n^ff" + strings.Repeat("b", 769) + ":1|c\ntest:1|c"))
+		[]byte(strings.Repeat("a", 255) + ":1|c\n^ff" + strings.Repeat("b", 769) + ":1|c\n^02bad:1|c\ntest:1|c"))
 
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)

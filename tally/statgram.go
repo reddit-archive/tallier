@@ -61,10 +61,10 @@ func (parser *StatgramParser) ParseStatgram(datagram []byte) Statgram {
 		if len(line) > 2 && line[0] == '^' {
 			prefixLen, err := strconv.ParseInt(string(line[1:3]), 16, 0)
 			if err == nil && int(prefixLen) <= previousLen {
-				previousLen = int(prefixLen) + len(line) - 3
-				if previousLen <= MAX_LINE_LEN {
+				lineLength := int(prefixLen) + len(line) - 3
+				if lineLength <= MAX_LINE_LEN {
 					copy(parser.previousBuffer[prefixLen:], line[3:])
-					line = parser.previousBuffer[:previousLen]
+					line = parser.previousBuffer[:lineLength]
 				} else {
 					line = nil
 				}
@@ -72,12 +72,14 @@ func (parser *StatgramParser) ParseStatgram(datagram []byte) Statgram {
 				line = nil
 			}
 		} else {
-			previousLen = len(line)
 			copy(parser.previousBuffer, line)
 		}
 
 		if line != nil {
 			parser.ParseStatgramLine(line)
+			previousLen = len(line)
+		} else {
+			previousLen = 0
 		}
 	}
 	return parser.Statgram[:parser.Length]
