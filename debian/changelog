@@ -1,3 +1,10 @@
+tallier (1.3.0) trusty; urgency=medium
+
+  * fix crash in statgram parsing caused by very long keys
+  * timers: drop "count" and add "upper_99" stat
+
+ -- Neil Williams <neil@reddit.com>  Thu, 19 Mar 2015 23:10:39 -0700
+
 tallier (1.2.0) precise; urgency=medium
 
   * use new harold configuration and authentication systems
