@@ -22,6 +22,7 @@ type Snapshot struct {
 	timings              map[string][]float64
 	stringCounts         map[string]*FrequencyCounter
 	stringCountIntervals []time.Duration
+	gauges               map[string]float64
 	start                time.Time
 	duration             time.Duration
 	numChildren          int
@@ -33,12 +34,13 @@ func NewSnapshot() *Snapshot {
 		counts:       make(map[string]float64),
 		timings:      make(map[string][]float64),
 		stringCounts: make(map[string]*FrequencyCounter),
+		gauges:       make(map[string]float64),
 		numChildren:  0,
 	}
 }
 
 func (snapshot *Snapshot) NumStats() int {
-	return len(snapshot.counts) + len(snapshot.timings)
+	return len(snapshot.counts) + len(snapshot.timings) + len(snapshot.gauges)
 }
 
 func (snapshot *Snapshot) Count(key string, value float64) {
@@ -64,6 +66,14 @@ func (snapshot *Snapshot) CountString(key, value string, count float64) {
 	fc.Count(value, count)
 }
 
+func (snapshot *Snapshot) Gauge(key string, value float64, replace bool) {
+	if replace {
+		snapshot.gauges[key] = value
+	} else {
+		snapshot.gauges[key] += value
+	}
+}
+
 func (snapshot *Snapshot) Report(key string, value float64, ts ...time.Time) {
 	var t time.Time
 	if len(ts) == 0 {
@@ -85,6 +95,8 @@ func (snapshot *Snapshot) ProcessStatgram(statgram Statgram) {
 		case STRING:
 			snapshot.CountString(sample.key, sample.stringValue,
 				sample.value/sample.sampleRate)
+		case GAUGE:
+			snapshot.Gauge(sample.key, sample.value, sample.replace)
 		}
 		snapshot.CountString("tallier.samples", sample.key, 1)
 	}
@@ -101,6 +113,9 @@ func (snapshot *Snapshot) Aggregate(child *Snapshot) {
 	}
 	for key, timings := range child.timings {
 		snapshot.timings[key] = append(snapshot.timings[key], timings...)
+	}
+	for key, value := range child.gauges {
+		snapshot.Gauge(key, value, false)
 	}
 	for key, stringCounts := range child.stringCounts {
 		fc, ok := snapshot.stringCounts[key]
@@ -148,6 +163,11 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 		report = append(report, makeLine("stats.timers.%s.rate %f", key,
 			float64(len(timings))/snapshot.duration.Seconds()))
 	}
+
+	for key, value := range snapshot.gauges {
+		report = append(report, makeLine("stats.%s %f", key, value))
+	}
+
 	for key, rvalue := range snapshot.reports {
 		report = append(report, fmt.Sprintf("stats.%s %f %d\n", key,
 			rvalue.value, rvalue.timestamp.Unix()))
@@ -156,10 +176,10 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 }
 
 func (snapshot *Snapshot) Flush() {
-	for k, _ := range snapshot.reports {
+	for k := range snapshot.reports {
 		delete(snapshot.reports, k)
 	}
-	for k, _ := range snapshot.counts {
+	for k := range snapshot.counts {
 		delete(snapshot.counts, k)
 	}
 	for k, ts := range snapshot.timings {
@@ -167,5 +187,8 @@ func (snapshot *Snapshot) Flush() {
 	}
 	for _, fcs := range snapshot.stringCounts {
 		fcs.Trim()
+	}
+	for k := range snapshot.gauges {
+		delete(snapshot.gauges, k)
 	}
 }
