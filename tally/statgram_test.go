@@ -48,6 +48,18 @@ func TestParseSample(t *testing.T) {
 	if expected != sample {
 		t.Errorf("expected %#v, got %#v", expected, sample)
 	}
+
+	expected = Sample{
+		key:        "test",
+		valueType:  GAUGE,
+		value:      120,
+		sampleRate: 1.0,
+	}
+
+	sample, _ = ParseSample("test", []byte("+120|g"))
+	if expected != sample {
+		t.Errorf("expected %#v, got %#v", expected, sample)
+	}
 }
 
 func TestParseStatgramLine(t *testing.T) {
@@ -73,6 +85,17 @@ func TestParseStatgramLine(t *testing.T) {
 		Sample{key: "test", value: 2.0, valueType: TIMER, sampleRate: 0.1},
 	}
 	statgram, err = parser.ParseStatgramLine([]byte("test:1|c:2|ms@0.1"))
+	if err != nil {
+		t.Error("expected statgram, got error:", err)
+	}
+	if s, ok := assertDeepEqual(expected, statgram); !ok {
+		t.Error(s)
+	}
+
+	expected = Statgram{
+		Sample{key: "test", value: -5, valueType: GAUGE, sampleRate: 1.0},
+	}
+	statgram, err = parser.ParseStatgramLine([]byte("test:-5|g\n"))
 	if err != nil {
 		t.Error("expected statgram, got error:", err)
 	}
@@ -111,17 +134,18 @@ func TestParseStatgram(t *testing.T) {
 		Sample{key: "s", valueType: STRING, stringValue: "a\nb|c\\d:e",
 			sampleRate: 1.0},
 		Sample{key: "z", value: 0.1, valueType: COUNTER, sampleRate: 1.0},
+		Sample{key: "w", value: 120, valueType: GAUGE, sampleRate: 1.0, replace: true},
 	}
 	parser := NewStatgramParser()
 	statgram := parser.ParseStatgram(
-		[]byte("x:1|c:2|c\ny:1|ms@0.5:err\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c"))
+		[]byte("x:1|c:2|c\ny:1|ms@0.5:err\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c\nw:120|g\n"))
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
 
 	statgram = parser.ParseStatgram(
 		[]byte("x:1|c\n^022|c\ny:1|ms@0.5:error\n^fferror\n" +
-			"s:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c"))
+			"s:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c\nw:120|g\n"))
 	if s, ok := assertDeepEqual(expected, statgram); !ok {
 		t.Error(s)
 	}
@@ -129,7 +153,7 @@ func TestParseStatgram(t *testing.T) {
 
 func TestLongCompressedStatgramLine(t *testing.T) {
 	expected := Statgram{
-		Sample{key: strings.Repeat("a", 255), value:1.0, valueType: COUNTER, sampleRate: 1.0},
+		Sample{key: strings.Repeat("a", 255), value: 1.0, valueType: COUNTER, sampleRate: 1.0},
 		Sample{key: "test", value: 1.0, valueType: COUNTER, sampleRate: 1.0},
 	}
 
@@ -144,7 +168,7 @@ func TestLongCompressedStatgramLine(t *testing.T) {
 }
 
 func BenchmarkParseStatgram(b *testing.B) {
-	bs := []byte("x:1|c:2|c\ny:1|m@0.5:e\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c")
+	bs := []byte("x:1|c:2|c\ny:1|m@0.5:e\ns:0|s|a\\nb\\&c\\\\d\\;e\nz:0.1|c\nl:+100|g")
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
 	s := ms.HeapObjects

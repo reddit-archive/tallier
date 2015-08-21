@@ -180,7 +180,7 @@ func (stringsPage) handle(req *StatusRequest) {
 		return
 	}
 	data := make([]string, 0, len(req.s.snapshot.stringCounts))
-	for key, _ := range req.s.snapshot.stringCounts {
+	for key := range req.s.snapshot.stringCounts {
 		data = append(data, key)
 	}
 	if needSort {

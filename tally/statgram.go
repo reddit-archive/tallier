@@ -18,6 +18,7 @@ const (
 	COUNTER SampleType = iota
 	TIMER
 	STRING
+	GAUGE
 )
 
 const MAX_LINE_LEN = 1024
@@ -28,6 +29,7 @@ type Sample struct {
 	valueType   SampleType
 	sampleRate  float64
 	stringValue string
+	replace     bool
 }
 
 type Statgram []Sample
@@ -176,6 +178,9 @@ func ParseSample(key string, part []byte) (sample Sample, err error) {
 	case 's':
 		sample.valueType = STRING
 		sample.stringValue = decodeStringSample(suffix)
+	case 'g':
+		sample.valueType = GAUGE
+		sample.value, sample.replace = decodeGaugeSample(bytes.TrimLeft(part, "|"))
 	default:
 		err = errors.New(fmt.Sprintf("invalid sample type code %#v", typeCode))
 	}
@@ -183,6 +188,17 @@ func ParseSample(key string, part []byte) (sample Sample, err error) {
 }
 
 var stringSampleReplacer *strings.Replacer
+
+func decodeGaugeSample(sample []byte) (value float64, replace bool) {
+	replace = false
+	value, _ = ParseFloat(sample)
+
+	if _, err := strconv.Atoi(string(sample[0])); err == nil {
+		replace = true
+	}
+
+	return
+}
 
 // Decodes a string sample in-place.
 func decodeStringSample(b []byte) string {

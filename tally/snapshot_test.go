@@ -13,8 +13,8 @@ func TestSnapshots(t *testing.T) {
 	a := NewSnapshot()
 	b := NewSnapshot()
 	a.ProcessStatgram(Statgram{
-		Sample{"x", 1.0, COUNTER, 1.0, ""},
-		Sample{"y", 1.0, COUNTER, 0.5, ""},
+		Sample{"x", 1.0, COUNTER, 1.0, "", false},
+		Sample{"y", 1.0, COUNTER, 0.5, "", false},
 	})
 	for i := 0.0; i < 10; i++ {
 		a.Time("z", i)
@@ -22,8 +22,8 @@ func TestSnapshots(t *testing.T) {
 	a.Count("tallier.messages.child_1", 2)
 	a.Count("tallier.bytes.child_1", 20)
 	b.ProcessStatgram(Statgram{
-		Sample{"y", 3.0, COUNTER, 1.0, ""},
-		Sample{"z", 4.0, COUNTER, 1.0, ""},
+		Sample{"y", 3.0, COUNTER, 1.0, "", false},
+		Sample{"z", 4.0, COUNTER, 1.0, "", false},
 	})
 	for i := 0.0; i < 5; i++ {
 		b.Time("z", 2*i)
@@ -100,8 +100,8 @@ func TestGraphiteReport(t *testing.T) {
 
 func TestStringValues(t *testing.T) {
 	statgram := Statgram{
-		Sample{"x", 10, STRING, 1.0, "A"},
-		Sample{"x", 1, STRING, 0.5, "B"},
+		Sample{"x", 10, STRING, 1.0, "A", false},
+		Sample{"x", 1, STRING, 0.5, "B", false},
 	}
 	snapshot := NewSnapshot()
 	snapshot.ProcessStatgram(statgram)
