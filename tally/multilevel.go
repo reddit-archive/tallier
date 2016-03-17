@@ -70,13 +70,13 @@ func (lvl *CountLevel) NewBucket() {
 type MultilevelCount []CountLevel
 
 func (mc MultilevelCount) Reset() {
-	for i, _ := range mc {
+	for i := range mc {
 		mc[i].Reset()
 	}
 }
 
 func (mc MultilevelCount) Count(value float64) {
-	for i, _ := range mc {
+	for i := range mc {
 		mc[i].Count(value)
 	}
 }

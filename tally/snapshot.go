@@ -156,10 +156,10 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 }
 
 func (snapshot *Snapshot) Flush() {
-	for k, _ := range snapshot.reports {
+	for k := range snapshot.reports {
 		delete(snapshot.reports, k)
 	}
-	for k, _ := range snapshot.counts {
+	for k := range snapshot.counts {
 		delete(snapshot.counts, k)
 	}
 	for k, ts := range snapshot.timings {
