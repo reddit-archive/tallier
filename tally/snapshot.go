@@ -124,7 +124,6 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 	counterScale := 1.0 / snapshot.duration.Seconds()
 	for key, value := range snapshot.counts {
 		report = append(report, makeLine("stats.counters.%s.rate %f", key, value*counterScale))
-		report = append(report, makeLine("stats.counters.%s.count %f", key, value))
 	}
 	for key, timings := range snapshot.timings {
 		if len(timings) == 0 {

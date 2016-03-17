@@ -77,7 +77,6 @@ func TestGraphiteReport(t *testing.T) {
 	}
 	expected = []string{
 		format("stats.counters.x.rate", 10),
-		format("stats.counters.x.count", 100),
 		format("stats.timers.y.lower", 1),
 		format("stats.timers.y.upper", 10),
 		format("stats.timers.y.upper_90", 9),
