@@ -129,7 +129,7 @@ func TestParseStatgram(t *testing.T) {
 
 func TestLongCompressedStatgramLine(t *testing.T) {
 	expected := Statgram{
-		Sample{key: strings.Repeat("a", 255), value:1.0, valueType: COUNTER, sampleRate: 1.0},
+		Sample{key: strings.Repeat("a", 255), value: 1.0, valueType: COUNTER, sampleRate: 1.0},
 		Sample{key: "test", value: 1.0, valueType: COUNTER, sampleRate: 1.0},
 	}
 

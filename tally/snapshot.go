@@ -123,8 +123,7 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 		len(snapshot.timings)+len(snapshot.reports)+2)
 	counterScale := 1.0 / snapshot.duration.Seconds()
 	for key, value := range snapshot.counts {
-		report = append(report, makeLine("stats.%s %f", key, value*counterScale))
-		report = append(report, makeLine("stats_counts.%s %f", key, value))
+		report = append(report, makeLine("stats.counters.%s.rate %f", key, value*counterScale))
 	}
 	for key, timings := range snapshot.timings {
 		if len(timings) == 0 {
@@ -149,17 +148,19 @@ func (snapshot *Snapshot) GraphiteReport() (report []string) {
 			float64(len(timings))/snapshot.duration.Seconds()))
 	}
 	for key, rvalue := range snapshot.reports {
-		report = append(report, fmt.Sprintf("stats.%s %f %d\n", key,
+		// these are basically internal gauges so that's where we'll namespace 'em.
+		// once we actually support gauges, this subsystem should be subsumed by that.
+		report = append(report, fmt.Sprintf("stats.gauges.%s %f %d\n", key,
 			rvalue.value, rvalue.timestamp.Unix()))
 	}
 	return
 }
 
 func (snapshot *Snapshot) Flush() {
-	for k, _ := range snapshot.reports {
+	for k := range snapshot.reports {
 		delete(snapshot.reports, k)
 	}
-	for k, _ := range snapshot.counts {
+	for k := range snapshot.counts {
 		delete(snapshot.counts, k)
 	}
 	for k, ts := range snapshot.timings {

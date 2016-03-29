@@ -76,8 +76,7 @@ func TestGraphiteReport(t *testing.T) {
 		return fmt.Sprintf("%s %f%s", stat, value, timestamp)
 	}
 	expected = []string{
-		format("stats.x", 10),
-		format("stats_counts.x", 100),
+		format("stats.counters.x.rate", 10),
 		format("stats.timers.y.lower", 1),
 		format("stats.timers.y.upper", 10),
 		format("stats.timers.y.upper_90", 9),
